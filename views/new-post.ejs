@@ -1,0 +1,77 @@
+<%- include('partials/header', { title: 'New post — hello worlds', query: '' }) %>
+
+<div class="container">
+  <h2>Start a new thread</h2>
+  <form class="form form-wide" action="/posts" method="POST">
+    <div class="field">
+      <label for="title">Title</label>
+      <input id="title" name="title" maxlength="140" value="<%= title %>" required />
+    </div>
+    <div class="field">
+      <label for="body">Post</label>
+      <textarea id="body" name="body" rows="10" required><%= body %></textarea>
+    </div>
+
+    <div class="field">
+      <label for="tag-select">Tags</label>
+      <select id="tag-select">
+        <option value="">Choose a tag…</option>
+        <% availableTags.forEach(function(t) { %>
+          <option value="<%= t %>"><%= t %></option>
+        <% }) %>
+      </select>
+
+      <div id="tag-box" class="tag-box"></div>
+
+      <input type="hidden" id="tags" name="tags" value="<%= tagsInput %>" />
+    </div>
+
+    <% if (error) { %>
+      <p class="error-text"><%= error %></p>
+    <% } %>
+    <button class="btn" type="submit">Post thread</button>
+  </form>
+</div>
+
+<script>
+  const select = document.getElementById('tag-select');
+  const box = document.getElementById('tag-box');
+  const hiddenInput = document.getElementById('tags');
+
+  let selected = hiddenInput.value ? hiddenInput.value.split(',').filter(Boolean) : [];
+
+  function render() {
+    box.innerHTML = '';
+    selected.forEach((tag) => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.textContent = "• " + tag;
+
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'tag-chip-remove';
+      del.textContent = '×';
+      del.addEventListener('click', () => {
+        selected = selected.filter((t) => t !== tag);
+        render();
+      });
+
+      chip.appendChild(del);
+      box.appendChild(chip);
+    });
+    hiddenInput.value = selected.join(',');
+  }
+
+  select.addEventListener('change', () => {
+    const value = select.value;
+    if (value && !selected.includes(value)) {
+      selected.push(value);
+      render();
+    }
+    select.value = '';
+  });
+
+  render();
+</script>
+
+<%- include('partials/footer') %>

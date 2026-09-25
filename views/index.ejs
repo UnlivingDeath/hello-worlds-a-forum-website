@@ -1,0 +1,79 @@
+<%- include('partials/header', { title: 'hello worlds', query: query, activeTags: activeTags, activeSort: activeSort }) %>
+
+<div class="container">
+
+  <div class="page-heading">
+    <% if (query || (activeTags && activeTags.length)) { %>
+      <h2>
+        >> searching: 
+        <% if (activeTags && activeTags.length) { %>
+          <% activeTags.forEach(function(t, i) { %>#<%= t %><%= i < activeTags.length - 1 ? ', ' : '' %><% }) %>
+        <% } %>
+        <% if (query && activeTags && activeTags.length) { %> > <% } %>
+        <% if (query) { %>“<%= query %>”<% } %>
+      </h2>
+    <% } else { %>
+      <h2>Latest posts</h2>
+    <% } %>
+  </div>
+  <% if (posts.length === 0) { %>
+    <p class="empty-state">
+      <% if (query || activeTags) { %>No posts match that search.<% } else { %>No posts yet. Be the first to start a thread.<% } %>
+    </p>
+  <% } %>
+
+  <% posts.forEach(function(post) { %>
+    <article class="post-card">
+      
+      <h2><a href="/posts/<%= post._id %>"><%= post.title %> </a></h2>
+      <h3>by @<%= post.authorName %></h3>
+
+      <% const myVote = user ? post.votes.find(function(v) { return v.user.toString() === user.id; }) : null; %>
+      <div class="vote-widget">
+        <% if (user) { %>
+          <form action="/posts/<%= post._id %>/vote" method="POST" class="vote-form">
+            <input type="hidden" name="value" value="1" />
+            <button type="submit" class="vote-btn <%= myVote && myVote.value === 1 ? 'active' : '' %>">+</button>
+          </form>
+        <% } %>
+        <span class="vote-score"><%= post.score %></span>
+        <% if (user) { %>
+          <form action="/posts/<%= post._id %>/vote" method="POST" class="vote-form">
+            <input type="hidden" name="value" value="-1" />
+            <button type="submit" class="vote-btn <%= myVote && myVote.value === -1 ? 'active' : '' %>">-</button>
+          </form>
+        <% } %>
+      </div>
+
+            <!-- <% if (post.tags && post.tags.length) { %>
+        <div class="tag-list">
+          <% post.tags.forEach(function(t) { %>
+            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>">• <%= t %></a>
+          <% }) %>
+        </div>
+      <% } %> -->
+      <br>
+      <p class="post-excerpt">
+        <%= post.body.length > 160 ? post.body.slice(0, 160).trim() + '…' : post.body %>
+      </p>
+
+      
+        <div class="post-meta">
+        <% if (post.tags && post.tags.length) { %>
+        <div class="tag-list">
+          <% post.tags.forEach(function(t) { %>
+            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>">• <%= t %></a>
+          <% }) %>
+        </div>
+      <% } %>
+      <div class="other-metas">
+
+          <i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toDateString() %><br>
+        <i class="bi bi-chat-left-quote-fill"></i> <%= post.commentCount %>
+      </div>
+      </div>
+    </article>
+  <% }) %>
+</div>
+
+<%- include('partials/footer') %>

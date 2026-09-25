@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title><%= typeof title !== 'undefined' ? title : 'hello worlds' %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Inter:wght@400;500;600&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-row">
+      <a href="/" class="site-title"><i class="bi bi-code-square"></i> hello worlds</a>
+<form class="search-form" action="/search" method="GET">
+  <input
+    type="search"
+    name="q"
+    placeholder="Search posts…"
+    value="<%= typeof query !== 'undefined' ? query : '' %>"
+  />
+
+<% const tags = typeof activeTags !== 'undefined' ? activeTags : []; %>
+<% const sortVal = typeof activeSort !== 'undefined' ? activeSort : 'latest'; %>
+<details class="tag-dropdown">
+  <summary class="tag-dropdown-summary">
+    Filter<% if (tags.length) { %> (<%= tags.length %>)<% } %>
+  </summary>
+  <div class="tag-dropdown-panel">
+    <div class="filter-group">
+      <div class="filter-group-label">Sort by</div>
+      <label class="tag-checkbox">
+        <input type="radio" name="sort" value="latest" <%= sortVal === 'latest' ? 'checked' : '' %> /> Latest
+      </label>
+      <label class="tag-checkbox">
+        <input type="radio" name="sort" value="active" <%= sortVal === 'active' ? 'checked' : '' %> /> Last active
+      </label>
+      <label class="tag-checkbox">
+        <input type="radio" name="sort" value="votes" <%= sortVal === 'votes' ? 'checked' : '' %> /> Most voted
+      </label>
+    </div>
+
+    <div class="filter-group">
+      <div class="filter-group-label">Tags</div>
+      <% availableTags.forEach(function(t) { %>
+        <label class="tag-checkbox">
+          <input type="checkbox" name="tags" value="<%= t %>" <%= tags.includes(t) ? 'checked' : '' %> />
+          #<%= t %>
+        </label>
+      <% }) %>
+    </div>
+
+    <button type="submit" class="btn btn-small">Apply</button>
+  </div>
+</details>
+
+  
+</form>
+    </div>
+        <div class="container header-row">
+
+          <nav class="site-nav">
+        <% if (user) { %>
+          <a href="/posts/new">New post</a>
+          <span class="username"><%= user.username %></span>
+          <form action="/logout" method="POST" style="display:inline">
+            <button class="link-btn" type="submit">Log out</button>
+          </form>
+        <% } else { %>
+          <a href="/login">Log in</a>
+          <a href="/register">Sign up</a>
+        <% } %>
+      </nav>
+      </div>
+  </header>
+  <main>
