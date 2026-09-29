@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: post.title + ' — hello worlds', query: '' }) %>
+<%- include('partials/header', { title: post.title + ' — hello worlds', query: '', editor: true}) %>
 <% const myVote = user ? post.votes.find(function(v) { return v.user.toString() === user.id; }) : null; %>
 
 
@@ -21,45 +21,71 @@
 <div class="container post-detail">
  
   <h2><%= post.title %></h2>
-  <div class="post-meta">
-    <%= post.authorName %> · <%= new Date(post.createdAt).toLocaleString() %>
+  <div class="post-meta-2">
+    <i class="bi bi-person-fill"></i> <%= post.authorName %><br><i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toLocaleString() %>
   </div>
+  <% if (user && post.author.toString() === user.id) { %>
+
+<% } %>
   <% if (post.tags && post.tags.length) { %>
     <div class="tag-list">
       <% post.tags.forEach(function(t) { %>
-        <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>">#<%= t %></a>
+        <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= t %></a>
       <% }) %>
     </div>
   <% } %>
-  <p class="post-body"><%= post.body %></p>
+
+  <!-- <p class="post-body"><%= post.body %></p> -->
+   <div class="post-body md-content"><%- md(post.body) %></div>
+     <% if (user && post.author.toString() === user.id) { %>
+
+    <div class="post-owner-actions">
+    <a href="/posts/<%= post._id %>/edit" class="btn btn-small edit-and-del-buttons"><i class="bi bi-pen"></i> edit</a>
+    <form action="/posts/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Delete this post? This cannot be undone.');" style="display:inline" class="delete-align">
+      <button type="submit" class="btn  btn-small edit-and-del-buttons"><i class="bi bi-trash"></i> delete</button>
+    </form>
+  </div>
+  <% } %>
 
   <div class="comments-section">
-    <h2><%= comments.length %> comment<%= comments.length === 1 ? '' : 's' %></h2>
+    <h2><i class="bi bi-chat-left-text-fill"></i> <%= comments.length %> comment<%= comments.length === 1 ? '' : 's' %></h2>
 
-    <% comments.forEach(function(c) { %>
-      <div class="comment">
-        <div class="comment-meta">
-          <%= c.authorName %> · <%= new Date(c.createdAt).toLocaleString() %>
-        </div>
-        <div><%= c.body %></div>
+<% comments.forEach(function(c) { %>
+  <div class="comment">
+    <div class="comment-meta">
+      <%= c.authorName %> · <%= new Date(c.createdAt).toLocaleString() %>
+      <% if (c.editedAt) { %> · <span class="edited-tag">edited</span><% } %>
+    </div>
+    <!-- <div><%= c.body %></div> -->
+     <div class="md-content"><%- md(c.body) %></div>
+    <% if (user && c.author.toString() === user.id) { %>
+      <div class="comment-owner-actions">
+        <a href="/posts/<%= post._id %>/comments/<%= c._id %>/edit">edit</a>
+        <form action="/posts/<%= post._id %>/comments/<%= c._id %>/delete" method="POST" onsubmit="return confirm('Delete this comment?');" style="display:inline">
+          <button type="submit" class="link-btn">delete</button>
+        </form>
       </div>
-    <% }) %>
+    <% } %>
+  </div>
+<% }) %>
 
     <% if (user) { %>
       <form class="comment-form" action="/posts/<%= post._id %>/comments" method="POST" style="margin-top: 1.5rem;">
         <div class="field">
-          <label for="body">Add a comment</label>
-          <textarea id="body" name="body" rows="3" required></textarea>
+          <label for="body">add a comment</label>
+          <textarea id="body" name="body" rows="3" data-markdown></textarea>
         </div>
         <% if (error) { %>
           <p class="error-text"><%= error %></p>
         <% } %>
-        <button class="btn" type="submit">Post comment</button>
+        <button class="btn" type="submit"><i class="bi bi-chat-right-quote-fill"></i> post comment</button>
       </form>
     <% } else { %>
-      <p class="helper-text"><a href="/login">Log in</a> to join the discussion.</p>
+      <p class="helper-text"><a href="/login">log in</a> to join the discussion.</p>
     <% } %>
   </div>
 </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="/js/editor.js"></script>
 <%- include('partials/footer') %>

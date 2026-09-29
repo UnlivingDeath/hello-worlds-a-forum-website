@@ -1,0 +1,18 @@
+<%- include('partials/header', { title: 'Edit comment — hello worlds', query: '' , editor: true}) %>
+
+<div class="container">
+  <h1>Edit comment</h1>
+  <form class="form form-wide" action="/posts/<%= post._id %>/comments/<%= comment._id %>/edit" method="POST">
+    <div class="field">
+      <label for="body">comment</label>
+      <textarea id="body" name="body" rows="4" data-markdown><%= comment.body %></textarea>
+    </div>
+    <% if (error) { %>
+      <p class="error-text"><%= error %></p>
+    <% } %>
+    <button class="btn" type="submit">save changes</button>
+  </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="/js/editor.js"></script>
+<%- include('partials/footer') %>

@@ -1,5 +1,17 @@
 <%- include('partials/header', { title: 'hello worlds', query: query, activeTags: activeTags, activeSort: activeSort }) %>
+<div class="home-layout">
 
+  <aside class="intro-panel"><div class="window-title-bar"><span>introduction</span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
+    <h2>welcome to &lthello worlds!&gt</h2>
+    <p>a place where we ask and answer anything related to code. there are <%= posts.length %> posts in total for you to check out.</p><br>
+    <% if (!user) { %>
+          <p>make yourself an account to engage in our community.</p>
+          <a href="/login">log in</a>
+          <br>
+          <a href="/register">sign up</a>
+    <% } %>
+    <a href="/about">about</a>
+  </div></aside>
 <div class="container">
 
   <div class="page-heading">
@@ -13,7 +25,15 @@
         <% if (query) { %>“<%= query %>”<% } %>
       </h2>
     <% } else { %>
-      <h2>Latest posts</h2>
+      <% if (activeSort == "votes") {%>
+        <h2>most voted posts</h2>
+      <% } %>
+      <% if (activeSort == "latest") {%>
+        <h2>latest posts</h2>
+      <% } %>
+      <% if (activeSort == "active") {%>
+        <h2>last active posts</h2>
+      <% } %>
     <% } %>
   </div>
   <% if (posts.length === 0) { %>
@@ -36,7 +56,7 @@
             <button type="submit" class="vote-btn <%= myVote && myVote.value === 1 ? 'active' : '' %>">+</button>
           </form>
         <% } %>
-        <span class="vote-score"><%= post.score %></span>
+        <span class="vote-score"><%= post.score %> <% if (!user) {%>upvotes<% } %></span>
         <% if (user) { %>
           <form action="/posts/<%= post._id %>/vote" method="POST" class="vote-form">
             <input type="hidden" name="value" value="-1" />
@@ -45,35 +65,42 @@
         <% } %>
       </div>
 
-            <!-- <% if (post.tags && post.tags.length) { %>
-        <div class="tag-list">
-          <% post.tags.forEach(function(t) { %>
-            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>">• <%= t %></a>
-          <% }) %>
-        </div>
-      <% } %> -->
+
       <br>
       <p class="post-excerpt">
-        <%= post.body.length > 160 ? post.body.slice(0, 160).trim() + '…' : post.body %>
+        <!-- <%= post.body.length > 160 ? post.body.slice(0, 160).trim() + '…' : post.body %> -->
+         <%= excerpt(post.body, 160) %>
       </p>
 
       
         <div class="post-meta">
+      <div class="tag-list">
+
         <% if (post.tags && post.tags.length) { %>
-        <div class="tag-list">
           <% post.tags.forEach(function(t) { %>
-            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>">• <%= t %></a>
-          <% }) %>
-        </div>
-      <% } %>
+            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= t %></a>
+          <% }) %>        
+        <% } else {%>
+          <p>this post has no <i class="bi bi-tags-fill"></i> tags.</p>
+        <% }%>
+
+      </div>
+
       <div class="other-metas">
 
           <i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toDateString() %><br>
         <i class="bi bi-chat-left-quote-fill"></i> <%= post.commentCount %>
+          <% if (post.editedAt) { %> · <span class="edited-tag">edited</span><% } %>
+
       </div>
       </div>
     </article>
   <% }) %>
+</div>
+  <aside class="side-panel-right"><div class="window-title-bar"><span>notifications</span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
+    <h2>you got mail!</h2>
+
+  </div></aside>
 </div>
 
 <%- include('partials/footer') %>

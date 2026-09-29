@@ -7,9 +7,9 @@ const connectDB = require('./config/db');
 const { attachUser } = require('./middleware/auth');
 const attachAvailableTags  = require('./middleware/tags');
 
-const authRoutes = require('./routes/authRoutes');
-const postRoutes = require('./routes/postRoutes');
-
+const authRoutes = require('./routes/auth');
+const postRoutes = require('./routes/post');
+const { renderMarkdown, excerpt } = require('./utils/markdown');
 const app = express();
 
 app.set('view engine', 'ejs');
@@ -47,4 +47,5 @@ connectDB().then(() => {
     console.log(`Forum app listening on port ${PORT}`);
   });
 });
-
+app.locals.md = renderMarkdown;
+app.locals.excerpt = excerpt;

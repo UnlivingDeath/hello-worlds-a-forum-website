@@ -1,21 +1,21 @@
 <%- include('partials/header', { title: 'Log in — hello worlds', query: '' }) %>
 
 <div class="container">
-  <h2>Log in</h2>
+  <h2>log in</h2>
   <form class="form" action="/login" method="POST">
     <div class="field">
-      <label for="username">Username</label>
+      <label for="username">username</label>
       <input id="username" name="username" required />
     </div>
     <div class="field">
-      <label for="password">Password</label>
+      <label for="password">password</label>
       <input id="password" name="password" type="password" required />
     </div>
     <% if (error) { %>
       <p class="error-text"><%= error %></p>
     <% } %>
-    <button class="btn" type="submit">Log in</button>
-    <p class="helper-text">No account yet? <a href="/register">Sign up</a></p>
+    <button class="btn" type="submit">ok</button>
+    <p class="helper-text">no account yet? <a href="/register">sign up</a></p>
   </form>
 </div>
 

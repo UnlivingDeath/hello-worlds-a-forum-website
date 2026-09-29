@@ -162,4 +162,95 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
   }
 });
 
+router.get('/posts/:id/edit', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).render('404');
+  if (post.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only edit your own posts');
+  }
+  res.render('edit-post', { post, error: null, tagsInput: post.tags.join(',') });
+});
+
+router.post('/posts/:id/edit', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).render('404');
+  if (post.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only edit your own posts');
+  }
+
+  const title = (req.body.title || '').trim();
+  const body = (req.body.body || '').trim();
+  const tags = parseTags(req.body.tags);
+
+  if (!title || !body) {
+    return res.render('edit-post', { post, error: 'Title and post are both required', tagsInput: req.body.tags || '' });
+  }
+
+  post.title = title;
+  post.body = body;
+  post.tags = tags;
+  post.editedAt = new Date();
+  await post.save();
+
+  res.redirect(`/posts/${post._id}`);
+});
+
+router.post('/posts/:id/delete', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post) return res.status(404).render('404');
+  if (post.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only delete your own posts');
+  }
+
+  await Comment.deleteMany({ post: post._id });
+  await post.deleteOne();
+
+  res.redirect('/');
+});
+
+router.get('/posts/:postId/comments/:commentId/edit', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.postId);
+  const comment = await Comment.findById(req.params.commentId);
+  if (!post || !comment) return res.status(404).render('404');
+  if (comment.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only edit your own comments');
+  }
+  res.render('edit-comment', { post, comment, error: null });
+});
+
+router.post('/posts/:postId/comments/:commentId/edit', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.postId);
+  const comment = await Comment.findById(req.params.commentId);
+  if (!post || !comment) return res.status(404).render('404');
+  if (comment.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only edit your own comments');
+  }
+
+  const body = (req.body.body || '').trim();
+  if (!body) {
+    return res.render('edit-comment', { post, comment, error: 'Comment cannot be empty' });
+  }
+
+  comment.body = body;
+  comment.editedAt = new Date();
+  await comment.save();
+
+  res.redirect(`/posts/${post._id}`);
+});
+
+router.post('/posts/:postId/comments/:commentId/delete', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.postId);
+  const comment = await Comment.findById(req.params.commentId);
+  if (!post || !comment) return res.status(404).render('404');
+  if (comment.author.toString() !== req.session.user.id) {
+    return res.status(403).send('You can only delete your own comments');
+  }
+
+  await comment.deleteOne();
+  post.commentCount = Math.max(0, post.commentCount - 1);
+  await post.save();
+
+  res.redirect(`/posts/${post._id}`);
+});
+
 module.exports = router;

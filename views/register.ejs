@@ -1,21 +1,21 @@
-<%- include('partials/header', { title: 'Sign up — hello worlds', query: '' }) %>
+<%- include('partials/header', { title: 'sign up — hello worlds', query: '' }) %>
 
 <div class="container">
-  <h2>Create an account</h2>
+  <h2>create an account</h2>
   <form class="form" action="/register" method="POST">
     <div class="field">
-      <label for="username">Username</label>
+      <label for="username">username</label>
       <input id="username" name="username" minlength="3" required />
     </div>
     <div class="field">
-      <label for="password">Password</label>
+      <label for="password">password</label>
       <input id="password" name="password" type="password" minlength="6" required />
     </div>
     <% if (error) { %>
       <p class="error-text"><%= error %></p>
     <% } %>
-    <button class="btn" type="submit">Sign up</button>
-    <p class="helper-text">Already have an account? <a href="/login">Log in</a></p>
+    <button class="btn" type="submit">sign up</button>
+    <p class="helper-text">already have an account? <a href="/login">log in.</a></p>
   </form>
 </div>
 

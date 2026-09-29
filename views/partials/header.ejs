@@ -12,6 +12,11 @@
   />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
   <link rel="stylesheet" href="/css/style.css" />
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" />
+<% if (typeof editor !== 'undefined' && editor) { %>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.css" />
+<% } %>
 </head>
 <body>
   <header class="site-header">
@@ -21,7 +26,7 @@
   <input
     type="search"
     name="q"
-    placeholder="Search posts…"
+    placeholder="search posts…"
     value="<%= typeof query !== 'undefined' ? query : '' %>"
   />
 
@@ -29,19 +34,19 @@
 <% const sortVal = typeof activeSort !== 'undefined' ? activeSort : 'latest'; %>
 <details class="tag-dropdown">
   <summary class="tag-dropdown-summary">
-    Filter<% if (tags.length) { %> (<%= tags.length %>)<% } %>
+    filter<% if (tags.length) { %> (<%= tags.length %>)<% } %>
   </summary>
   <div class="tag-dropdown-panel">
     <div class="filter-group">
-      <div class="filter-group-label">Sort by</div>
+      <div class="filter-group-label">sort by</div>
       <label class="tag-checkbox">
-        <input type="radio" name="sort" value="latest" <%= sortVal === 'latest' ? 'checked' : '' %> /> Latest
+        <input type="radio" name="sort" value="latest" <%= sortVal === 'latest' ? 'checked' : '' %> /> latest
       </label>
       <label class="tag-checkbox">
-        <input type="radio" name="sort" value="active" <%= sortVal === 'active' ? 'checked' : '' %> /> Last active
+        <input type="radio" name="sort" value="active" <%= sortVal === 'active' ? 'checked' : '' %> /> last active
       </label>
       <label class="tag-checkbox">
-        <input type="radio" name="sort" value="votes" <%= sortVal === 'votes' ? 'checked' : '' %> /> Most voted
+        <input type="radio" name="sort" value="votes" <%= sortVal === 'votes' ? 'checked' : '' %> /> most voted
       </label>
     </div>
 
@@ -55,7 +60,7 @@
       <% }) %>
     </div>
 
-    <button type="submit" class="btn btn-small">Apply</button>
+    <button type="submit" class="btn btn-small">apply</button>
   </div>
 </details>
 
@@ -66,14 +71,14 @@
 
           <nav class="site-nav">
         <% if (user) { %>
-          <a href="/posts/new">New post</a>
+          <a href="/posts/new">new post</a>
           <span class="username"><%= user.username %></span>
           <form action="/logout" method="POST" style="display:inline">
-            <button class="link-btn" type="submit">Log out</button>
+            <button class="link-btn" type="submit">log out</button>
           </form>
         <% } else { %>
-          <a href="/login">Log in</a>
-          <a href="/register">Sign up</a>
+          <a href="/login">log in</a>
+          <a href="/register">sign up</a>
         <% } %>
       </nav>
       </div>

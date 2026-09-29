@@ -22,6 +22,10 @@ const commentSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    editedAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -1,21 +1,21 @@
-<%- include('partials/header', { title: 'New post — hello worlds', query: '' }) %>
+<%- include('partials/header', { title: 'New post — hello worlds', query: '',editor: true }) %>
 
 <div class="container">
   <h2>Start a new thread</h2>
   <form class="form form-wide" action="/posts" method="POST">
     <div class="field">
-      <label for="title">Title</label>
+      <label for="title">title</label>
       <input id="title" name="title" maxlength="140" value="<%= title %>" required />
     </div>
     <div class="field">
-      <label for="body">Post</label>
-      <textarea id="body" name="body" rows="10" required><%= body %></textarea>
+      <label for="body">post</label>
+      <textarea id="body" name="body" rows="10" data-markdown><%= body %></textarea>
     </div>
 
     <div class="field">
-      <label for="tag-select">Tags</label>
-      <select id="tag-select">
-        <option value="">Choose a tag…</option>
+      <label for="tag-select">tags</label>
+      <select id="tag-select" class="tag-dropdown-summary">
+        <option value="">choose a tag…</option>
         <% availableTags.forEach(function(t) { %>
           <option value="<%= t %>"><%= t %></option>
         <% }) %>
@@ -29,7 +29,7 @@
     <% if (error) { %>
       <p class="error-text"><%= error %></p>
     <% } %>
-    <button class="btn" type="submit">Post thread</button>
+    <button class="btn" type="submit">post</button>
   </form>
 </div>
 
@@ -45,7 +45,7 @@
     selected.forEach((tag) => {
       const chip = document.createElement('span');
       chip.className = 'tag-chip';
-      chip.textContent = "• " + tag;
+      chip.textContent = "" + tag;
 
       const del = document.createElement('button');
       del.type = 'button';
@@ -73,5 +73,6 @@
 
   render();
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
+<script src="/js/editor.js"></script>
 <%- include('partials/footer') %>

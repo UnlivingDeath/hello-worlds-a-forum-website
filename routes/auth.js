@@ -14,15 +14,15 @@ router.post('/register', async (req, res) => {
     const { password } = req.body;
 
     if (username.length < 3) {
-      return res.render('register', { error: 'Username must be at least 3 characters' });
+      return res.render('register', { error: 'username must be at least 3 characters.' });
     }
     if (!password || password.length < 6) {
-      return res.render('register', { error: 'Password must be at least 6 characters' });
+      return res.render('register', { error: 'password must be at least 6 characters.' });
     }
 
     const existing = await User.findOne({ username });
     if (existing) {
-      return res.render('register', { error: 'That username is already taken' });
+      return res.render('register', { error: 'that username is already taken' });
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
@@ -32,7 +32,7 @@ router.post('/register', async (req, res) => {
     res.redirect('/');
   } catch (err) {
     console.error(err);
-    res.render('register', { error: 'Something went wrong. Please try again.' });
+    res.render('register', { error: 'something went wrong. try again.' });
   }
 });
 
@@ -47,19 +47,19 @@ router.post('/login', async (req, res) => {
 
     const user = await User.findOne({ username });
     if (!user) {
-      return res.render('login', { error: 'Invalid username or password' });
+      return res.render('login', { error: 'invalid username or password' });
     }
 
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) {
-      return res.render('login', { error: 'Invalid username or password' });
+      return res.render('login', { error: 'invalid username or password' });
     }
 
     req.session.user = { id: user._id.toString(), username: user.username };
     res.redirect('/');
   } catch (err) {
     console.error(err);
-    res.render('login', { error: 'Something went wrong. Please try again.' });
+    res.render('login', { error: 'something went wrong. try again.' });
   }
 });
 
