@@ -1,4 +1,4 @@
-<%- include('partials/header', { title: post.title + ' — hello worlds', query: '', editor: true}) %>
+<%- include('partials/header', { title: post.title + ' - hello worlds', query: '', editor: true}) %>
 <% const myVote = user ? post.votes.find(function(v) { return v.user.toString() === user.id; }) : null; %>
 
 
@@ -51,7 +51,7 @@
     <h2><i class="bi bi-chat-left-text-fill"></i> <%= comments.length %> comment<%= comments.length === 1 ? '' : 's' %></h2>
 
 <% comments.forEach(function(c) { %>
-  <div class="comment">
+  <div class="comment" id="comment-<%= c._id %>">
     <div class="comment-meta">
       <%= c.authorName %> · <%= new Date(c.createdAt).toLocaleString() %>
       <% if (c.editedAt) { %> · <span class="edited-tag">edited</span><% } %>

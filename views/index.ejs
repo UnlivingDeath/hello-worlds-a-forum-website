@@ -97,10 +97,35 @@
     </article>
   <% }) %>
 </div>
-  <aside class="side-panel-right"><div class="window-title-bar"><span>notifications</span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
-    <h2>you got mail!</h2>
-
-  </div></aside>
+  <aside class="side-panel-right"><div class="window-title-bar"><span>notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
+  <% if (!user) { %>
+    <p class="notif-empty">log in to see your notifications.</p>
+  <% } else if (notifications.length === 0) { %>
+    <p class="notif-empty">you got mail! (well, not yet - nothing here.)</p>
+  <% } else { %>
+    <% if (unreadCount > 0) { %>
+      <form action="/notifications/read-all" method="POST" style="margin-bottom:0.5rem;">
+        <button type="submit" class="notif-mark-all-btn">mark all as read</button>
+      </form>
+    <% } %>
+    <ul class="notif-list">
+      <% notifications.forEach(function(n) { %>
+        <li class="notif-item<%= n.read ? '' : ' notif-unread' %>">
+          <form action="/notifications/<%= n._id %>/read" method="POST" style="margin:0;">
+            <button type="submit" class="notif-link-btn" title="<%= n.message %>">
+              <span class="notif-icon">
+                <% if (n.type === 'comment') { %><i class="bi bi-chat-left-quote-fill"></i>
+                <% } else { %><i class="bi bi-arrow-up-circle-fill"></i><% } %>
+              </span>
+              <span class="notif-text"><%= n.message %></span>
+              <% if (!n.read) { %><span class="notif-dot"></span><% } %>
+            </button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+</div></aside>
 </div>
 
 <%- include('partials/footer') %>

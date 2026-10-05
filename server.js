@@ -6,9 +6,11 @@ const MongoStore = require('connect-mongo');
 const connectDB = require('./config/db');
 const { attachUser } = require('./middleware/auth');
 const attachAvailableTags  = require('./middleware/tags');
+const Notification = require('./models/Notification');
 
 const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/post');
+const notificationRoutes = require('./routes/notifications');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
 const app = express();
 
@@ -33,8 +35,30 @@ app.use(
 app.use(attachUser);
 app.use(attachAvailableTags);
 
+
+app.use(async (req, res, next) => {
+  if (req.session.user) {
+    try {
+      const notifications = await Notification.find({ recipient: req.session.user.id })
+        .sort({ createdAt: -1 })
+        .limit(20)
+        .lean();
+      res.locals.notifications = notifications;
+      res.locals.unreadCount = notifications.filter((n) => !n.read).length;
+    } catch {
+      res.locals.notifications = [];
+      res.locals.unreadCount = 0;
+    }
+  } else {
+    res.locals.notifications = [];
+    res.locals.unreadCount = 0;
+  }
+  next();
+});
+
 app.use('/', authRoutes);
 app.use('/', postRoutes);
+app.use('/', notificationRoutes);
 
 app.use((req, res) => {
   res.status(404).render('404');

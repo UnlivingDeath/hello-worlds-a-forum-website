@@ -1,20 +1,24 @@
 const express = require('express');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
+const Notification = require('../models/Notification');
 const { requireAuth } = require('../middleware/auth');
 
-// const CURATED_TAGS = ['react', 'node', 'express', 'mongodb', 'javascript', 'css', 'homework', 'help', 'showcase'];
+
 const router = express.Router();
 
 
-// router.get('/', async (req, res) => {
-//   const posts = await Post.find().sort({ createdAt: -1 }).limit(100);
-//   res.render('index', { posts, query: '', activeTags: null });
-// });
+const VOTE_MILESTONES = [5, 10, 25, 50, 100, 250, 500];
+
+
+
+
+
+
 function buildSort(sort) {
   if (sort === 'votes') return { score: -1 };
   if (sort === 'active') return { lastActivityAt: -1 };
-  return { createdAt: -1 }; // 'latest', and the default
+  return { createdAt: -1 }; 
 }
 
 router.get('/', async (req, res) => {
@@ -23,18 +27,18 @@ router.get('/', async (req, res) => {
   res.render('index', { posts, query: '', activeTags: [], activeSort: sort });
 });
 
-// router.get('/search', async (req, res) => {
-//   const q = (req.query.q || '').trim();
-//   const tag = (req.query.tag || '').trim().toLowerCase();
-//   const filter = {};
-//   if (tag) filter.tags = tag;
-//   if (q) {
-//     const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-//     filter.$or = [{ title: regex }, { body: regex }];
-//   }
-//   const posts = await Post.find(filter).sort({ createdAt: -1 }).limit(100);
-//   res.render('index', { posts, query: q, activeTags: tag || null });
-// });
+
+
+
+
+
+
+
+
+
+
+
+
 router.post('/posts/:id/vote', requireAuth, async (req, res) => {
   const value = parseInt(req.body.value, 10);
   if (value !== 1 && value !== -1) return res.status(400).send('Invalid vote value');
@@ -44,6 +48,7 @@ router.post('/posts/:id/vote', requireAuth, async (req, res) => {
 
   const userId = req.session.user.id;
   const existing = post.votes.find((v) => v.user.toString() === userId);
+  const scoreBefore = post.score;
 
   if (existing && existing.value === value) {
     post.score -= existing.value;
@@ -57,6 +62,35 @@ router.post('/posts/:id/vote', requireAuth, async (req, res) => {
   }
 
   await post.save();
+
+  
+  
+  if (post.author.toString() !== userId) {
+    for (const milestone of VOTE_MILESTONES) {
+      if (scoreBefore < milestone && post.score >= milestone) {
+        
+        const alreadyNotified = await Notification.findOne({
+          recipient: post.author,
+          post: post._id,
+          type: 'upvote_milestone',
+          message: new RegExp(`${milestone} upvote`),
+        });
+        if (!alreadyNotified) {
+          await Notification.create({
+            recipient: post.author,
+            type: 'upvote_milestone',
+            post: post._id,
+            postTitle: post.title,
+            actorName: null,
+            message: `your post "${post.title}" reached ${milestone} upvote${milestone === 1 ? '' : 's'}!`,
+            link: `/posts/${post._id}`,
+          });
+        }
+        break; 
+      }
+    }
+  }
+
   res.redirect(req.get('Referer') || '/');
 });
 router.get('/search', async (req, res) => {
@@ -79,9 +113,9 @@ router.get('/search', async (req, res) => {
   res.render('index', { posts, query: q, activeTags: tags, activeSort: sort });
 });
 
-// router.get('/posts/new', requireAuth, (req, res) => {
-//   res.render('new-post', { error: null, title: '', body: '', tagsInput: '' });
-// });
+
+
+
 
 router.get('/posts/new', requireAuth, async (req, res) => {
   res.render('new-post', { error: null, title: '', body: '', tagsInput: '' });
@@ -145,7 +179,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
       return res.render('post', { post, comments, error: 'Comment cannot be empty' });
     }
 
-    await Comment.create({
+    const newComment = await Comment.create({
       post: post._id,
       body,
       author: req.session.user.id,
@@ -156,7 +190,21 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
     post.lastActivityAt = new Date();
     await post.save();
 
-    res.redirect(`/posts/${post._id}`);
+    
+    if (post.author.toString() !== req.session.user.id) {
+      await Notification.create({
+        recipient: post.author,
+        type: 'comment',
+        post: post._id,
+        postTitle: post.title,
+        comment: newComment._id,
+        actorName: req.session.user.username,
+        message: `@${req.session.user.username} commented on "${post.title}"`,
+        link: `/posts/${post._id}#comment-${newComment._id}`,
+      });
+    }
+
+    res.redirect(`/posts/${post._id}#comment-${newComment._id}`);
   } catch (err) {
     res.status(404).render('404');
   }
