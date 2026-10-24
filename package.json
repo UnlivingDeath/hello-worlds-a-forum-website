@@ -21,6 +21,6 @@
     "markdown-it": "^15.0.2",
     "marked": "^18.0.14",
     "mongoose": "^8.6.0",
-    "sanitize-html": "^2.17.7"
+    "sanitize-html": "^2.18.1"
   }
 }

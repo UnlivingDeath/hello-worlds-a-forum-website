@@ -43,7 +43,7 @@
   <% } %>
 
   <% posts.forEach(function(post) { %>
-    <article class="post-card">
+    <article class="post-card" data-post-card>
       
       <h2><a href="/posts/<%= post._id %>"><%= post.title %> </a></h2>
       <h3>by @<%= post.authorName %></h3>
@@ -96,6 +96,9 @@
       </div>
     </article>
   <% }) %>
+  <% if (posts.length > 5) { %>
+    <button type="button" class="btn show-more-btn" data-show-more hidden>show more posts</button>
+  <% } %>
 </div>
   <aside class="side-panel-right"><div class="window-title-bar"><span>notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
   <% if (!user) { %>
@@ -128,4 +131,5 @@
 </div></aside>
 </div>
 
+<script src="/js/show-more.js"></script>
 <%- include('partials/footer') %>
