@@ -4,7 +4,7 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
-const mongoose = require('mongoose');
+const { getMongoClient } = require('./config/db');
 const { attachUser } = require('./middleware/auth');
 const attachAvailableTags  = require('./middleware/tags');
 const Notification = require('./models/Notification');
@@ -32,7 +32,7 @@ function createApp() {
       resave: false,
       saveUninitialized: false,
       store: MongoStore.create({
-        clientPromise: mongoose.connection.asPromise().then((connection) => connection.getClient()),
+        client: getMongoClient(),
       }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7,
