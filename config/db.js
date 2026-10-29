@@ -1,19 +1,28 @@
 const mongoose = require('mongoose');
 
+let connectionPromise;
+
 async function connectDB() {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
-    console.error('MONGODB_URI is not set. Add it to your .env file.');
-    process.exit(1);
+    throw new Error('MONGODB_URI is not set. Add it to your environment.');
   }
 
-  try {
-    await mongoose.connect(uri);
-    console.log('MongoDB connected');
-  } catch (err) {
-    console.error('MongoDB connection error:', err.message);
-    process.exit(1);
+  if (mongoose.connection.readyState === mongoose.ConnectionStates.connected) {
+    return;
   }
 
+  if (!connectionPromise) {
+    connectionPromise = mongoose.connect(uri, { serverSelectionTimeoutMS: 10000 })
+      .then(() => {
+        console.log('MongoDB connected');
+      })
+      .finally(() => {
+        connectionPromise = undefined;
+      });
+  }
+
+  await connectionPromise;
 }
+
 module.exports = connectDB;
