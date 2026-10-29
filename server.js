@@ -31,7 +31,9 @@ function createApp() {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
       resave: false,
       saveUninitialized: false,
-      store: MongoStore.create({ client: mongoose.connection.getClient() }),
+      store: MongoStore.create({
+        clientPromise: mongoose.connection.asPromise().then((connection) => connection.getClient()),
+      }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7,
         secure: process.env.NODE_ENV === 'production',
