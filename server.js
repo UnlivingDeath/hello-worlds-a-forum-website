@@ -14,7 +14,7 @@ const notificationRoutes = require('./routes/notifications');
 const codeExecutionRoutes = require('./routes/execute');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
 
-function createApp(mongoClient) {
+function createApp() {
   const app = express();
 
   app.set('trust proxy', 1);
@@ -30,7 +30,10 @@ function createApp(mongoClient) {
       secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
       resave: false,
       saveUninitialized: false,
-      store: MongoStore.create({ client: mongoClient }),
+      store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI,
+        mongoOptions: { serverSelectionTimeoutMS: 10000 },
+      }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7,
         secure: process.env.NODE_ENV === 'production',
@@ -87,8 +90,8 @@ if (require.main === module) {
   const PORT = process.env.PORT || 3000;
 
   connectDB()
-    .then((mongoClient) => {
-      createApp(mongoClient).listen(PORT, () => {
+    .then(() => {
+      createApp().listen(PORT, () => {
         console.log(`Forum app listening on port ${PORT}`);
       });
     })
