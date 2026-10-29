@@ -9,7 +9,7 @@ async function connectDB() {
   }
 
   if (mongoose.connection.readyState === mongoose.ConnectionStates.connected) {
-    return;
+    return mongoose.connection.getClient();
   }
 
   if (!connectionPromise) {
@@ -23,6 +23,11 @@ async function connectDB() {
   }
 
   await connectionPromise;
+  const client = mongoose.connection.getClient();
+  if (!client) {
+    throw new Error('MongoDB connected without exposing its client.');
+  }
+  return client;
 }
 
 module.exports = connectDB;
