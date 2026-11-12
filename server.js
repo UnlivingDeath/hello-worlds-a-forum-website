@@ -4,6 +4,7 @@ const path = require('path');
 const express = require('express');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+const { getMongoClient } = require('./config/db');
 const { attachUser } = require('./middleware/auth');
 const attachAvailableTags  = require('./middleware/tags');
 const Notification = require('./models/Notification');
@@ -31,8 +32,7 @@ function createApp() {
       resave: false,
       saveUninitialized: false,
       store: MongoStore.create({
-        mongoUrl: process.env.MONGODB_URI,
-        mongoOptions: { serverSelectionTimeoutMS: 10000 },
+        client: getMongoClient(),
       }),
       cookie: {
         maxAge: 1000 * 60 * 60 * 24 * 7,
