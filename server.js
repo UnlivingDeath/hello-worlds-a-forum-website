@@ -14,6 +14,7 @@ const postRoutes = require('./routes/post');
 const notificationRoutes = require('./routes/notifications');
 const codeExecutionRoutes = require('./routes/execute');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
+const connectDB = require('./config/db');
 
 function createApp() {
   const app = express();
@@ -86,7 +87,6 @@ function createApp() {
 }
 
 if (require.main === module) {
-  const connectDB = require('./config/db');
   const PORT = process.env.PORT || 3000;
 
   connectDB()
@@ -101,4 +101,22 @@ if (require.main === module) {
     });
 }
 
-module.exports = createApp;
+let app;
+
+async function handler(req, res) {
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error('Unable to connect to MongoDB:', err.message);
+    return res.status(503).send('Service temporarily unavailable');
+  }
+
+  if (!app) {
+    app = createApp();
+  }
+
+  return app(req, res);
+}
+
+module.exports = handler;
+module.exports.createApp = createApp;
