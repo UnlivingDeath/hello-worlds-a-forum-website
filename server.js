@@ -86,12 +86,31 @@ function createApp() {
   return app;
 }
 
+const app = express();
+let forumApp;
+
+app.use((req, res, next) => {
+  connectDB()
+    .then(() => {
+      if (!forumApp) {
+        forumApp = createApp();
+      }
+      forumApp(req, res, next);
+    })
+    .catch((err) => {
+      console.error('Unable to initialize the forum app:', err.message);
+      if (res.headersSent) return next(err);
+      res.status(503).send('Service temporarily unavailable');
+    });
+});
+
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
 
   connectDB()
     .then(() => {
-      createApp().listen(PORT, () => {
+      forumApp = createApp();
+      forumApp.listen(PORT, () => {
         console.log(`Forum app listening on port ${PORT}`);
       });
     })
@@ -101,22 +120,5 @@ if (require.main === module) {
     });
 }
 
-let app;
-
-async function handler(req, res) {
-  try {
-    await connectDB();
-  } catch (err) {
-    console.error('Unable to connect to MongoDB:', err.message);
-    return res.status(503).send('Service temporarily unavailable');
-  }
-
-  if (!app) {
-    app = createApp();
-  }
-
-  return app(req, res);
-}
-
-module.exports = handler;
+module.exports = app;
 module.exports.createApp = createApp;
