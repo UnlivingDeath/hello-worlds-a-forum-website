@@ -14,6 +14,7 @@ const postRoutes = require('./routes/post');
 const notificationRoutes = require('./routes/notifications');
 const codeExecutionRoutes = require('./routes/execute');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
+const connectDB = require('./config/db');
 
 function createApp() {
   const app = express();
@@ -85,13 +86,31 @@ function createApp() {
   return app;
 }
 
+const app = express();
+let forumApp;
+
+app.use((req, res, next) => {
+  connectDB()
+    .then(() => {
+      if (!forumApp) {
+        forumApp = createApp();
+      }
+      forumApp(req, res, next);
+    })
+    .catch((err) => {
+      console.error('Unable to initialize the forum app:', err.message);
+      if (res.headersSent) return next(err);
+      res.status(503).send('Service temporarily unavailable');
+    });
+});
+
 if (require.main === module) {
-  const connectDB = require('./config/db');
   const PORT = process.env.PORT || 3000;
 
   connectDB()
     .then(() => {
-      createApp().listen(PORT, () => {
+      forumApp = createApp();
+      forumApp.listen(PORT, () => {
         console.log(`Forum app listening on port ${PORT}`);
       });
     })
@@ -101,4 +120,5 @@ if (require.main === module) {
     });
 }
 
-module.exports = createApp;
+module.exports = app;
+module.exports.createApp = createApp;
