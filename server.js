@@ -13,6 +13,7 @@ const authRoutes = require('./routes/auth');
 const postRoutes = require('./routes/post');
 const notificationRoutes = require('./routes/notifications');
 const codeExecutionRoutes = require('./routes/execute');
+const chatRoutes = require('./routes/chat');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
 const connectDB = require('./config/db');
 
@@ -68,6 +69,7 @@ function createApp() {
   app.use('/', authRoutes);
   app.use('/', postRoutes);
   app.use('/', notificationRoutes);
+  app.use('/', chatRoutes);
   app.use('/api', codeExecutionRoutes);
 
   app.use((err, req, res, next) => {
