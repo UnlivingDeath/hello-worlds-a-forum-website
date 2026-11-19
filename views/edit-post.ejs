@@ -7,6 +7,7 @@
       <label for="title"><i class="bi bi-text-left"></i> title</label>
       <input id="title" name="title" maxlength="140" value="<%= post.title %>" required />
     </div>
+    <div class="field"><label><input type="checkbox" name="commentsDisabled" <%= post.commentsDisabled ? 'checked' : '' %>> disable comments</label></div>
     <div class="field">
       <label for="body"><i class="bi bi-body-text"></i> post</label>
       <textarea id="body" name="body" rows="10" data-markdown><%= post.body %></textarea>

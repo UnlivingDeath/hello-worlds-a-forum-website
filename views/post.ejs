@@ -22,9 +22,9 @@
  
   <h2><%= post.title %></h2>
   <div class="post-meta-2">
-    <i class="bi bi-person-fill"></i> <%= post.authorName %><br><i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toLocaleString() %>
+    <i class="bi bi-person-fill"></i> <a href="/users/<%= post.author %>"><%= post.authorRole === 'creator' ? '[creator] ' : post.authorRole === 'admin' ? '[admin] ' : '' %><%= post.authorName %></a><br><i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toLocaleString() %>
   </div>
-  <% if (user && post.author.toString() === user.id) { %>
+  <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
 
 <% } %>
   <% if (post.tags && post.tags.length) { %>
@@ -35,9 +35,22 @@
     </div>
   <% } %>
 
+  <% if (post.poll && post.poll.options && post.poll.options.length >= 2) { %>
+    <% const pollVoted = user && post.poll.options.some(o => o.votes.some(v => v.toString() === user.id)); %>
+    <section class="poll"><h3><%= post.poll.question %></h3>
+      <% if (user && !pollVoted) { %><form action="/posts/<%= post._id %>/poll/vote" method="POST"><% } %>
+      <% post.poll.options.forEach(function(option, index) { const count = option.votes.length; const total = post.poll.options.reduce((sum, item) => sum + item.votes.length, 0); %>
+        <div><% if (user && !pollVoted) { %><label><input type="radio" name="option" value="<%= index %>" required> <%= option.title %></label><% } else { %><span><%= option.title %></span><% } %>
+        <% if (pollVoted) { %><span> — <%= total ? Math.round(count * 100 / total) : 0 %>% (<%= count %>)</span><% } %></div>
+      <% }) %>
+      <% if (user && !pollVoted) { %><button class="btn btn-small" type="submit">vote</button></form><% } else if (!user) { %><p><a href="/login">log in</a> to vote.</p><% } else { %><form action="/posts/<%= post._id %>/poll/vote" method="POST"><label for="change-vote">change vote</label><select id="change-vote" name="option"><% post.poll.options.forEach(function(option, index) { %><option value="<%= index %>"><%= option.title %></option><% }) %></select><button class="btn btn-small">update</button></form><% } %>
+    </section>
+  <% } %>
+  <% if (user && post.author.toString() !== user.id) { %><details><summary>report post</summary><form action="/posts/<%= post._id %>/report" method="POST"><textarea name="reason" maxlength="2000" required placeholder="Why are you reporting this post?"></textarea><button class="btn btn-small">send report</button></form></details><% } %>
+
   <!-- <p class="post-body"><%= post.body %></p> -->
    <div class="post-body md-content"><%- md(post.body) %></div>
-     <% if (user && post.author.toString() === user.id) { %>
+     <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
 
     <div class="post-owner-actions">
     <a href="/posts/<%= post._id %>/edit" class="btn btn-small edit-and-del-buttons"><i class="bi bi-pen"></i> edit</a>
@@ -53,7 +66,7 @@
 <% comments.forEach(function(c) { %>
   <div class="comment" id="comment-<%= c._id %>">
     <div class="comment-meta">
-      <%= c.authorName %> · <%= new Date(c.createdAt).toLocaleString() %>
+      <a href="/users/<%= c.author %>"><%= c.authorRole === 'creator' ? '[creator] ' : c.authorRole === 'admin' ? '[admin] ' : '' %><%= c.authorName %></a> · <%= new Date(c.createdAt).toLocaleString() %>
       <% if (c.editedAt) { %> · <span class="edited-tag">edited</span><% } %>
     </div>
     <!-- <div><%= c.body %></div> -->
@@ -69,7 +82,7 @@
   </div>
 <% }) %>
 
-    <% if (user) { %>
+    <% if (user && !post.commentsDisabled) { %>
       <form class="comment-form" action="/posts/<%= post._id %>/comments" method="POST" style="margin-top: 1.5rem;">
         <div class="field">
           <label for="body">add a comment</label>
@@ -80,7 +93,7 @@
         <% } %>
         <button class="btn" type="submit"><i class="bi bi-chat-right-quote-fill"></i> post comment</button>
       </form>
-    <% } else { %>
+    <% } else if (post.commentsDisabled) { %><p class="helper-text">Comments are disabled for this post.</p><% } else { %>
       <p class="helper-text"><a href="/login">log in</a> to join the discussion.</p>
     <% } %>
   </div>

@@ -11,6 +11,12 @@
       <label for="body">post</label>
       <textarea id="body" name="body" rows="10" data-markdown><%= body %></textarea>
     </div>
+    <div class="field"><label><input type="checkbox" name="commentsDisabled"> disable comments</label></div>
+    <fieldset class="field"><legend>optional poll (leave question empty for no poll)</legend>
+      <label for="pollQuestion">question</label><input id="pollQuestion" name="pollQuestion" maxlength="200">
+      <% for (let i = 0; i < 8; i++) { %><label for="pollOption<%= i %>">option <%= i + 1 %><%= i < 2 ? ' (required when adding a poll)' : '' %></label><input id="pollOption<%= i %>" name="pollOptions" maxlength="100" <%= i < 2 ? 'data-poll-required' : '' %>><% } %>
+      <small>Single choice. Voters can change their vote.</small>
+    </fieldset>
 
     <div class="field">
       <label for="tag-select">tags</label>

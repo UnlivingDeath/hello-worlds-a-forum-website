@@ -1,7 +1,7 @@
 <%- include('partials/header', { title: 'hello worlds', query: query, activeTags: activeTags, activeSort: activeSort }) %>
 <div class="home-layout">
 
-  <aside class="intro-panel"><div class="window-title-bar"><span>introduction</span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
+  <aside class="intro-panel"><details open><summary class="window-title-bar">introduction</summary><div class="window-contents">
     <h2>welcome to &lthello worlds!&gt</h2>
     <p>a place where we ask and answer anything related to code. there are <%= posts.length %> posts in total for you to check out.</p><br>
     <% if (!user) { %>
@@ -11,7 +11,7 @@
           <a href="/register">sign up</a>
     <% } %>
     <a href="/about">about</a>
-  </div></aside>
+  </div></details></aside>
 <div class="container">
 
   <div class="page-heading">
@@ -46,7 +46,7 @@
     <article class="post-card" data-post-card>
       
       <h2><a href="/posts/<%= post._id %>"><%= post.title %> </a></h2>
-      <h3>by @<%= post.authorName %></h3>
+      <h3>by <a href="/users/<%= post.author %>"><%= post.authorRole === 'creator' ? '[creator] ' : post.authorRole === 'admin' ? '[admin] ' : '' %>@<%= post.authorName %></a></h3>
 
       <% const myVote = user ? post.votes.find(function(v) { return v.user.toString() === user.id; }) : null; %>
       <div class="vote-widget">
@@ -94,13 +94,17 @@
 
       </div>
       </div>
+      <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
+        <div class="post-owner-actions"><a class="btn btn-small" href="/posts/<%= post._id %>/edit">edit</a><form action="/posts/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Delete this post?');"><button class="btn btn-small">delete</button></form></div>
+      <% } %>
+      <% if (user && post.author.toString() !== user.id) { %><details><summary>report</summary><form action="/posts/<%= post._id %>/report" method="POST"><textarea name="reason" required maxlength="2000" placeholder="Reason"></textarea><button class="btn btn-small">send report</button></form></details><% } %>
     </article>
   <% }) %>
   <% if (posts.length > 5) { %>
     <button type="button" class="btn show-more-btn" data-show-more hidden>show more posts</button>
   <% } %>
 </div>
-  <aside class="side-panel-right"><div class="window-title-bar"><span>notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></span><div><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">_</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">□</span><span style=" padding: 4px 6px; margin-left: 4px; background: #c0c0c0; color: black; cursor: pointer;">X</span></div></div><div class="window-contents">
+  <aside class="side-panel-right"><details open><summary class="window-title-bar">notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></summary><div class="window-contents">
   <% if (!user) { %>
     <p class="notif-empty">log in to see your notifications.</p>
   <% } else if (notifications.length === 0) { %>
@@ -111,24 +115,34 @@
         <button type="submit" class="notif-mark-all-btn">mark all as read</button>
       </form>
     <% } %>
+    <form action="/notifications/clear-all" method="POST" onsubmit="return confirm('Clear all notifications?');"><button class="notif-mark-all-btn">clear all</button></form>
     <ul class="notif-list">
       <% notifications.forEach(function(n) { %>
         <li class="notif-item<%= n.read ? '' : ' notif-unread' %>">
-          <form action="/notifications/<%= n._id %>/read" method="POST" style="margin:0;">
+          <% if (n.type === 'report_response') { %><div class="notif-link-btn notif-response-text"><span class="notif-icon"><i class="bi bi-shield-check"></i></span><span class="notif-text"><%= n.message %></span></div><% } else { %><form action="/notifications/<%= n._id %>/read" method="POST" style="margin:0;">
             <button type="submit" class="notif-link-btn" title="<%= n.message %>">
               <span class="notif-icon">
                 <% if (n.type === 'comment') { %><i class="bi bi-chat-left-quote-fill"></i>
+                <% } else if (n.type === 'report_response') { %><i class="bi bi-shield-check"></i>
                 <% } else { %><i class="bi bi-arrow-up-circle-fill"></i><% } %>
               </span>
               <span class="notif-text"><%= n.message %></span>
               <% if (!n.read) { %><span class="notif-dot"></span><% } %>
             </button>
-          </form>
+          </form><% } %>
         </li>
       <% }) %>
     </ul>
+    <a href="/notifications">show all notifications</a>
   <% } %>
-</div></aside>
+</div></details>
+  <% if (user && ['admin','creator'].includes(user.role)) { %>
+    <details class="admin-log" open><summary class="window-title-bar">admin report log</summary><div class="window-contents">
+      <nav><a href="/admin/reports?sort=recent">recent</a> · <a href="/admin/reports?sort=user">by user</a> · <a href="/admin/reports?sort=post">by post</a> · <a href="/admin/reports">show all</a></nav>
+      <% (reports || []).forEach(function(report) { %><details class="report-item" open><summary>@<%= report.reporterName %> · <%= report.postTitle %></summary><p><%= report.reason %></p><% if (report.status === 'open') { %><form action="/reports/<%= report._id %>/respond" method="POST"><textarea name="response" maxlength="2000" placeholder="Response to reporter"></textarea><select name="decision"><option value="keep">keep post</option><option value="remove">remove post</option></select><button class="btn btn-small">respond</button></form><% } else { %><p><%= report.status %>: <%= report.response %></p><% } %></details><% }) %>
+    </div></details>
+  <% } %>
+  </aside>
 </div>
 
 <script src="/js/show-more.js"></script>

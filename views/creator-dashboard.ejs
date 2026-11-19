@@ -1,0 +1,3 @@
+<%- include('partials/header', { title: 'Creator dashboard', query: '' }) %>
+<div class="container"><h1>Creator dashboard</h1><h2>Admins</h2><% if (!admins.length) { %><p>No admins assigned.</p><% } %><ul><% admins.forEach(a => { %><li>@<%= a.username %> <form action="/creator/admins/<%= a._id %>/revoke" method="POST" style="display:inline"><button class="link-btn">revoke admin</button></form></li><% }) %></ul>
+<form action="/creator/admins" method="POST"><label for="username">Add admin by username</label><input id="username" name="username" required minlength="3" maxlength="24"><button class="btn">add</button></form></div><%- include('partials/footer') %>

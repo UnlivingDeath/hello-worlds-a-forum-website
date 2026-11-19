@@ -1,0 +1,7 @@
+<%- include('partials/header', { title: 'Notifications', query: '' }) %>
+<div class="container"><h1>All notifications</h1>
+  <% if (!allNotifications.length) { %><p>No notifications.</p><% } %>
+  <ul class="notif-list"><% allNotifications.forEach(function(n) { %><li class="notif-item<%= n.read ? '' : ' notif-unread' %>"><% if (n.type === 'report_response') { %><span class="notif-link-btn"><%= n.message %></span><% } else { %><form action="/notifications/<%= n._id %>/read" method="POST"><button class="notif-link-btn"><%= n.message %></button></form><% } %></li><% }) %></ul>
+  <form action="/notifications/read-all" method="POST"><button class="btn">mark all read</button></form>
+  <form action="/notifications/clear-all" method="POST" onsubmit="return confirm('Clear all notifications?');"><button class="btn">clear all</button></form>
+</div><%- include('partials/footer') %>
