@@ -49,6 +49,11 @@ const postSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    commentsDisabled: { type: Boolean, default: false },
+    poll: {
+      question: { type: String, trim: true, maxlength: 200 },
+      options: [{ title: { type: String, trim: true, maxlength: 100 }, votes: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] }],
+    },
   },
 
 

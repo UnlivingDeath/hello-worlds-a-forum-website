@@ -14,6 +14,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    role: { type: String, enum: ['user', 'admin', 'creator'], default: 'user' },
+    profileVisibility: {
+      postsCreated: { type: Boolean, default: true },
+      postsUpvoted: { type: Boolean, default: true },
+      comments: { type: Boolean, default: true },
+      allowComments: { type: Boolean, default: true },
+      allowAiGathering: { type: Boolean, default: false },
+    },
   },
   { timestamps: true }
 );

@@ -1,8 +1,10 @@
 const express = require('express');
 const Post = require('../models/Post');
 const Comment = require('../models/Comment');
+const User = require('../models/User');
 const Notification = require('../models/Notification');
-const { requireAuth } = require('../middleware/auth');
+const Report = require('../models/Report');
+const { requireAuth, isModerator } = require('../middleware/auth');
 
 
 const router = express.Router();
@@ -21,10 +23,19 @@ function buildSort(sort) {
   return { createdAt: -1 }; 
 }
 
+async function addAuthorRoles(posts) {
+  const ids = [...new Set(posts.map((post) => post.author.toString()))];
+  const users = await User.find({ _id: { $in: ids } }).select('_id role').lean();
+  const roles = new Map(users.map((account) => [account._id.toString(), account.role]));
+  posts.forEach((post) => { post.authorRole = roles.get(post.author.toString()) || 'user'; });
+}
+
 router.get('/', async (req, res) => {
   const sort = req.query.sort || 'latest';
   const posts = await Post.find().sort(buildSort(sort)).limit(100);
-  res.render('index', { posts, query: '', activeTags: [], activeSort: sort });
+  await addAuthorRoles(posts);
+  const reports = isModerator(req.currentUser) ? await Report.find().sort({ createdAt: -1 }).limit(10).lean() : [];
+  res.render('index', { posts, query: '', activeTags: [], activeSort: sort, reports });
 });
 
 
@@ -110,7 +121,9 @@ router.get('/search', async (req, res) => {
   }
 
   const posts = await Post.find(filter).sort(buildSort(sort)).limit(100);
-  res.render('index', { posts, query: q, activeTags: tags, activeSort: sort });
+  await addAuthorRoles(posts);
+  const reports = isModerator(req.currentUser) ? await Report.find().sort({ createdAt: -1 }).limit(10).lean() : [];
+  res.render('index', { posts, query: q, activeTags: tags, activeSort: sort, reports });
 });
 
 
@@ -134,6 +147,13 @@ router.post('/posts', requireAuth, async (req, res) => {
   const title = (req.body.title || '').trim();
   const body = (req.body.body || '').trim();
   const tags = parseTags(req.body.tags);
+  const commentsDisabled = req.body.commentsDisabled === 'on';
+  const pollQuestion = (req.body.pollQuestion || '').trim();
+  const pollOptions = Array.isArray(req.body.pollOptions) ? req.body.pollOptions : req.body.pollOptions ? [req.body.pollOptions] : [];
+  const options = pollOptions.map((title) => ({ title: String(title).trim(), votes: [] })).filter((option) => option.title).slice(0, 8);
+  if (pollQuestion && (options.length < 2 || pollOptions.length > 8)) {
+    return res.status(400).render('new-post', { error: 'A poll needs a question and between 2 and 8 non-empty options.', title, body, tagsInput: req.body.tags || '' });
+  }
 
 
   if (!title || !body) {
@@ -150,6 +170,8 @@ router.post('/posts', requireAuth, async (req, res) => {
     tags,
     author: req.session.user.id,
     authorName: req.session.user.username,
+    commentsDisabled,
+    ...(pollQuestion && options.length >= 2 ? { poll: { question: pollQuestion.slice(0, 200), options } } : {}),
   });
 
   res.redirect(`/posts/${post._id}`);
@@ -161,6 +183,11 @@ router.get('/posts/:id', async (req, res) => {
     if (!post) return res.status(404).render('404');
 
     const comments = await Comment.find({ post: post._id }).sort({ createdAt: 1 });
+    const accounts = await User.find({ _id: { $in: [...new Set(comments.map((comment) => comment.author.toString()))] } }).select('_id role').lean();
+    const roles = new Map(accounts.map((account) => [account._id.toString(), account.role]));
+    comments.forEach((comment) => { comment.authorRole = roles.get(comment.author.toString()) || 'user'; });
+    const authorAccount = await User.findById(post.author).select('role').lean();
+    post.authorRole = authorAccount?.role || 'user';
     res.render('post', { post, comments, error: null});
   } catch (err) {
     res.status(404).render('404');
@@ -171,6 +198,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).render('404');
+    if (post.commentsDisabled) return res.status(403).send('Comments are disabled for this post');
 
     const body = (req.body.body || '').trim();
 
@@ -213,7 +241,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
 router.get('/posts/:id/edit', requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).render('404');
-  if (post.author.toString() !== req.session.user.id) {
+  if (post.author.toString() !== req.session.user.id && !isModerator(req.currentUser)) {
     return res.status(403).send('You can only edit your own posts');
   }
   res.render('edit-post', { post, error: null, tagsInput: post.tags.join(',') });
@@ -222,7 +250,7 @@ router.get('/posts/:id/edit', requireAuth, async (req, res) => {
 router.post('/posts/:id/edit', requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).render('404');
-  if (post.author.toString() !== req.session.user.id) {
+  if (post.author.toString() !== req.session.user.id && !isModerator(req.currentUser)) {
     return res.status(403).send('You can only edit your own posts');
   }
 
@@ -237,6 +265,7 @@ router.post('/posts/:id/edit', requireAuth, async (req, res) => {
   post.title = title;
   post.body = body;
   post.tags = tags;
+  post.commentsDisabled = req.body.commentsDisabled === 'on';
   post.editedAt = new Date();
   await post.save();
 
@@ -246,7 +275,7 @@ router.post('/posts/:id/edit', requireAuth, async (req, res) => {
 router.post('/posts/:id/delete', requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
   if (!post) return res.status(404).render('404');
-  if (post.author.toString() !== req.session.user.id) {
+  if (post.author.toString() !== req.session.user.id && !isModerator(req.currentUser)) {
     return res.status(403).send('You can only delete your own posts');
   }
 
@@ -254,6 +283,31 @@ router.post('/posts/:id/delete', requireAuth, async (req, res) => {
   await post.deleteOne();
 
   res.redirect('/');
+});
+
+router.post('/posts/:id/poll/vote', requireAuth, async (req, res) => {
+  const post = await Post.findById(req.params.id);
+  if (!post || !post.poll?.options?.length) return res.status(404).render('404');
+  const index = Number.parseInt(req.body.option, 10);
+  if (!Number.isInteger(index) || index < 0 || index >= post.poll.options.length) return res.status(400).send('Choose a valid option');
+  await Post.updateOne({ _id: post._id, 'poll.options.1': { $exists: true } }, [{
+    $set: { 'poll.options': {
+      $map: {
+        input: { $range: [0, { $size: '$poll.options' }] },
+        as: 'optionIndex',
+        in: {
+          $let: {
+            vars: { option: { $arrayElemAt: ['$poll.options', '$$optionIndex'] } },
+            in: { $mergeObjects: ['$$option', { votes: { $concatArrays: [
+              { $filter: { input: '$$option.votes', as: 'voter', cond: { $ne: ['$$voter', req.currentUser._id] } } },
+              { $cond: [{ $eq: ['$$optionIndex', index] }, [req.currentUser._id], []] },
+            ] } }] },
+          },
+        },
+      },
+    } },
+  }]);
+  res.redirect(req.get('Referer') || `/posts/${post._id}`);
 });
 
 router.get('/posts/:postId/comments/:commentId/edit', requireAuth, async (req, res) => {

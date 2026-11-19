@@ -14,6 +14,8 @@ const postRoutes = require('./routes/post');
 const notificationRoutes = require('./routes/notifications');
 const codeExecutionRoutes = require('./routes/execute');
 const chatRoutes = require('./routes/chat');
+const userRoutes = require('./routes/user');
+const moderationRoutes = require('./routes/moderation');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
 const connectDB = require('./config/db');
 
@@ -49,12 +51,11 @@ function createApp() {
   app.use(async (req, res, next) => {
     if (req.session.user) {
       try {
-        const notifications = await Notification.find({ recipient: req.session.user.id })
+        const [notifications, unreadCount] = await Promise.all([Notification.find({ recipient: req.session.user.id })
           .sort({ createdAt: -1 })
-          .limit(20)
-          .lean();
+          .limit(10).lean(), Notification.countDocuments({ recipient: req.session.user.id, read: false })]);
         res.locals.notifications = notifications;
-        res.locals.unreadCount = notifications.filter((n) => !n.read).length;
+        res.locals.unreadCount = unreadCount;
       } catch {
         res.locals.notifications = [];
         res.locals.unreadCount = 0;
@@ -69,6 +70,8 @@ function createApp() {
   app.use('/', authRoutes);
   app.use('/', postRoutes);
   app.use('/', notificationRoutes);
+  app.use('/', userRoutes);
+  app.use('/', moderationRoutes);
   app.use('/', chatRoutes);
   app.use('/api', codeExecutionRoutes);
 

@@ -4,6 +4,11 @@ const { requireAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
+router.get('/notifications', requireAuth, async (req, res) => {
+  const notifications = await Notification.find({ recipient: req.session.user.id }).sort({ createdAt: -1 }).lean();
+  res.render('notifications', { allNotifications: notifications });
+});
+
 // Mark a single notification as read and redirect to its link
 router.post('/notifications/:id/read', requireAuth, async (req, res) => {
   const notif = await Notification.findById(req.params.id);
@@ -21,6 +26,11 @@ router.post('/notifications/read-all', requireAuth, async (req, res) => {
     { recipient: req.session.user.id, read: false },
     { $set: { read: true } }
   );
+  res.redirect('/');
+});
+
+router.post('/notifications/clear-all', requireAuth, async (req, res) => {
+  await Notification.deleteMany({ recipient: req.session.user.id });
   res.redirect('/');
 });
 

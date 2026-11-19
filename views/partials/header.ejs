@@ -73,7 +73,9 @@
         <% if (user) { %>
           <a href="/posts/new">new post</a>
           <a href="/chat">chat</a>
-          <span class="username"><%= user.username %></span>
+          <a href="/users/<%= user.id %>">page</a>
+          <% if (user.role === 'creator') { %><a href="/creator/dashboard">dashboard</a><% } %>
+          <span class="username"><%= user.role === 'creator' ? '[creator] ' : user.role === 'admin' ? '[admin] ' : '' %><%= user.username %></span>
           <form action="/logout" method="POST" style="display:inline">
             <button class="link-btn" type="submit">log out</button>
           </form>

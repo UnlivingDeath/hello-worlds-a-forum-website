@@ -9,18 +9,18 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['comment', 'upvote_milestone'],
+      enum: ['comment', 'upvote_milestone', 'report_response'],
       required: true,
     },
     // The post the notification is about
     post: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Post',
-      required: true,
+      default: null,
     },
     postTitle: {
       type: String,
-      required: true,
+      default: '',
     },
     // Optional - only set for comment notifications
     comment: {
@@ -36,12 +36,12 @@ const notificationSchema = new mongoose.Schema(
     // Pre-built human-readable message
     message: {
       type: String,
-      required: true,
+      default: '',
     },
     // URL the notification links to (e.g. /posts/:id or /posts/:id#comment-:cid)
     link: {
       type: String,
-      required: true,
+      default: '#',
     },
     read: {
       type: Boolean,

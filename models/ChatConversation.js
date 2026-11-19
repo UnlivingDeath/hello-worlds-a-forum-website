@@ -6,6 +6,15 @@ const messageSchema = new mongoose.Schema(
     content: { type: String, required: true, maxlength: 20000 },
     code: { type: String, maxlength: 10000 },
     sources: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Post' }],
+    profileSources: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    voteSummary: {
+      type: new mongoose.Schema({
+        averagePositivePercent: { type: Number, min: 0, max: 100, required: true },
+        ratedPostCount: { type: Number, min: 1, required: true },
+        citedPostCount: { type: Number, min: 1, required: true },
+      }, { _id: false }),
+      default: null,
+    },
   },
   { timestamps: true }
 );

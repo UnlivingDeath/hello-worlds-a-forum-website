@@ -13,11 +13,12 @@
   const instructionsField = document.getElementById('instructions-field');
   const promptField = document.getElementById('prompt-field');
   const modeDescription = document.getElementById('mode-description');
+  const postAssistantPrompts = document.getElementById('post-assistant-prompts');
 
   const descriptions = {
     'code-review': 'Paste code for a review. Add instructions if you want a specific focus.',
-    qna: 'Ask about the current posts and their comments. Answers include links to supporting posts.',
-    'post-assistant': 'Ask for a summary or other help using only the selected post and its comments.',
+    qna: 'Ask about current posts. Answers link to matching posts and show their average positive rating.',
+    'post-assistant': 'Choose a writing action or ask a question about this post. Answers use this post and its comments only.',
   };
 
   function updateModeFields() {
@@ -28,6 +29,7 @@
     if (instructionsField) instructionsField.hidden = !codeMode;
     if (promptField) promptField.hidden = codeMode;
     if (postUrlField) postUrlField.hidden = !postMode;
+    if (postAssistantPrompts) postAssistantPrompts.hidden = !postMode;
     if (modeDescription) modeDescription.textContent = descriptions[modeSelect.value];
   }
 
@@ -41,7 +43,7 @@
     return result;
   }
 
-  function addMessage(role, content, sources = []) {
+  function addMessage(role, content, sources = [], voteSummary = null) {
     document.getElementById('chat-empty')?.remove();
     const article = document.createElement('article');
     article.className = `chat-message ${role}`;
@@ -51,6 +53,20 @@
     body.className = 'chat-message-content';
     body.textContent = content;
     article.append(label, body);
+    if (role === 'assistant' && voteSummary) {
+      const rating = document.createElement('p');
+      rating.className = 'chat-vote-summary';
+      rating.textContent = `${voteSummary.averagePositivePercent}% average positive rating of cited posts · ${voteSummary.ratedPostCount} rated posts · ${voteSummary.citedPostCount} cited posts`;
+      article.append(rating);
+    }
+    if (role === 'assistant' && conversation?.mode === 'post-assistant') {
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.className = 'chat-copy-button';
+      copy.dataset.copyMessage = '';
+      copy.textContent = 'copy response';
+      article.append(copy);
+    }
     if (sources.length) {
       const sourceRow = document.createElement('div');
       sourceRow.className = 'chat-sources';
@@ -59,7 +75,7 @@
       sourceRow.append(sourceLabel);
       sources.forEach((source) => {
         const link = document.createElement('a');
-        link.href = `/posts/${encodeURIComponent(source.id)}`;
+        link.href = source.url || `/posts/${encodeURIComponent(source.id)}`;
         link.textContent = source.title;
         sourceRow.append(link);
       });
@@ -124,7 +140,7 @@
         return;
       }
       addMessage('user', userText);
-      addMessage('assistant', result.answer, result.sources);
+      addMessage('assistant', result.answer, result.sources, result.voteSummary);
       if (mode === 'code-review') {
         document.getElementById('chat-code').value = '';
         document.getElementById('chat-instructions').value = '';
@@ -137,6 +153,27 @@
     } finally {
       submitButton.disabled = false;
       submitButton.textContent = 'send';
+    }
+  });
+
+  document.querySelectorAll('[data-chat-prompt]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const prompt = document.getElementById('chat-prompt');
+      if (!prompt) return;
+      prompt.value = button.dataset.chatPrompt;
+      form.requestSubmit();
+    });
+  });
+
+  messagesEl.addEventListener('click', async (event) => {
+    const button = event.target.closest('[data-copy-message]');
+    if (!button) return;
+    const text = button.closest('.chat-message')?.querySelector('.chat-message-content')?.textContent || '';
+    try {
+      await navigator.clipboard.writeText(text);
+      button.textContent = 'copied';
+    } catch {
+      button.textContent = 'copy unavailable';
     }
   });
 

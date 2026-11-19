@@ -58,11 +58,18 @@
             <article class="chat-message <%= message.role === 'assistant' ? 'assistant' : 'user' %>">
               <strong><%= message.role === 'assistant' ? 'assistant' : 'you' %></strong>
               <div class="chat-message-content"><%= message.content %></div>
+              <% if (message.role === 'assistant' && message.voteSummary) { %>
+                <p class="chat-vote-summary"><%= message.voteSummary.averagePositivePercent %>% average positive rating of cited posts · <%= message.voteSummary.ratedPostCount %> rated posts · <%= message.voteSummary.citedPostCount %> cited posts</p>
+              <% } %>
+              <% if (message.role === 'assistant' && activeConversation.mode === 'post-assistant') { %>
+                <button type="button" class="chat-copy-button" data-copy-message>copy response</button>
+              <% } %>
               <% if (message.sources && message.sources.length) { %>
                 <div class="chat-sources"><span>sources:</span>
                   <% message.sources.filter(Boolean).forEach(function(source) { %>
                     <a href="/posts/<%= source._id %>"><%= source.title %></a>
                   <% }) %>
+                  <% (message.profileSources || []).forEach(function(source) { %><a href="<%= source.url %>"><%= source.title %></a><% }) %>
                 </div>
               <% } %>
             </article>
@@ -76,6 +83,13 @@
       </div>
 
       <form class="chat-composer" id="chat-form">
+        <div class="chat-quick-prompts" id="post-assistant-prompts" role="group" aria-label="Post assistant actions" <%= activeConversation && activeConversation.mode === 'post-assistant' ? '' : 'hidden' %>>
+          <button type="button" data-chat-prompt="Summarize this post and its comments.">summarize</button>
+          <button type="button" data-chat-prompt="Explain this post for a beginner using only its content and comments.">explain simply</button>
+          <button type="button" data-chat-prompt="Extract the key points and any steps described in this post and its comments.">key points</button>
+          <button type="button" data-chat-prompt="Suggest a clearer title and relevant tags based only on this post.">title and tags</button>
+          <button type="button" data-chat-prompt="Rewrite this post for clarity while preserving only the information it contains.">rewrite for clarity</button>
+        </div>
         <% if (activeConversation && activeConversation.mode === 'code-review') { %>
           <div class="field">
             <label for="chat-code">code</label>
