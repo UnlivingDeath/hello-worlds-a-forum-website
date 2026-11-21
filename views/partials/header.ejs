@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title><%= typeof title !== 'undefined' ? title : 'hello worlds' %></title>
+  <title><%= String(typeof title !== 'undefined' ? title : 'hello worlds').toLowerCase() %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -32,9 +32,10 @@
 
 <% const tags = typeof activeTags !== 'undefined' ? activeTags : []; %>
 <% const sortVal = typeof activeSort !== 'undefined' ? activeSort : 'latest'; %>
+<% const userFilter = typeof activeUsers !== 'undefined' ? activeUsers : ''; %>
 <details class="tag-dropdown">
   <summary class="tag-dropdown-summary">
-    filter<% if (tags.length) { %> (<%= tags.length %>)<% } %>
+    filter<% if (tags.length || userFilter.trim()) { %> (<%= tags.length + (userFilter.trim() ? 1 : 0) %>)<% } %>
   </summary>
   <div class="tag-dropdown-panel">
     <div class="filter-group">
@@ -51,11 +52,16 @@
     </div>
 
     <div class="filter-group">
+      <label class="filter-group-label" for="filter-users">posts by users (comma-separated)</label>
+      <input id="filter-users" class="filter-user-input" type="text" name="users" maxlength="500" value="<%= userFilter %>" placeholder="@username1, @username2" autocomplete="off" />
+    </div>
+
+    <div class="filter-group">
       <div class="filter-group-label">Tags</div>
-      <% availableTags.forEach(function(t) { %>
+      <% (availableTagFilters || availableTags).forEach(function(t) { %>
         <label class="tag-checkbox">
-          <input type="checkbox" name="tags" value="<%= t %>" <%= tags.includes(t) ? 'checked' : '' %> />
-          #<%= t %>
+          <input type="checkbox" name="tags" value="<%= t.value %>" <%= tags.includes(t.value) ? 'checked' : '' %> />
+          #<%= t.label %>
         </label>
       <% }) %>
     </div>
@@ -67,23 +73,51 @@
   
 </form>
     </div>
-        <div class="container header-row">
+        <div class="container header-row nav-header-row">
 
-          <nav class="site-nav">
+          <nav class="site-nav" aria-label="Primary navigation">
         <% if (user) { %>
-          <a href="/posts/new">new post</a>
-          <a href="/chat">chat</a>
-          <a href="/users/<%= user.id %>">page</a>
-          <% if (user.role === 'creator') { %><a href="/creator/dashboard">dashboard</a><% } %>
+          <a href="/posts/new"><i class="bi bi-plus-lg"></i> new post</a>
+          <div class="header-vr"></div>
+          <a class="ai-assist-style" href="/chat"><i class="bi bi-stars"></i> ai chat</a>
+          <div class="header-vr"></div>
+          <a href="/users/<%= user.id %>"><i class="bi bi-person"></i> user</a>
+          <div class="header-vr"></div>
+          <% if (user.role === 'creator') { %><a href="/creator/dashboard"><i class="bi bi-card-list"></i> dashboard</a><% } %>
+          <div class="header-vr"></div>
+
           <span class="username"><%= user.role === 'creator' ? '[creator] ' : user.role === 'admin' ? '[admin] ' : '' %><%= user.username %></span>
           <form action="/logout" method="POST" style="display:inline">
-            <button class="link-btn" type="submit">log out</button>
+            <button class="link-btn" type="submit"><i class="bi bi-box-arrow-right"></i> log out</button>
           </form>
         <% } else { %>
           <a href="/login">log in</a>
           <a href="/register">sign up</a>
         <% } %>
       </nav>
+
+      <div class="mobile-header-nav">
+        <% if (user) { %>
+          <span class="mobile-username"><%= user.role === 'creator' ? '[creator] ' : user.role === 'admin' ? '[admin] ' : '' %><%= user.username %></span>
+        <% } %>
+        <details class="header-menu">
+          <summary aria-label="Open navigation menu"><i class="bi bi-list"></i></summary>
+          <nav class="header-menu-panel" aria-label="Mobile navigation">
+            <% if (user) { %>
+              <a href="/posts/new"><i class="bi bi-plus-lg"></i> new post</a>
+              <a class="ai-assist-style" href="/chat"><i class="bi bi-stars"></i> ai chat</a>
+              <a href="/users/<%= user.id %>"><i class="bi bi-person"></i> user</a>
+              <% if (user.role === 'creator') { %><a href="/creator/dashboard"><i class="bi bi-card-list"></i> dashboard</a><% } %>
+              <form action="/logout" method="POST">
+                <button class="link-btn" type="submit"><i class="bi bi-box-arrow-right"></i> log out</button>
+              </form>
+            <% } else { %>
+              <a href="/login">log in</a>
+              <a href="/register">sign up</a>
+            <% } %>
+          </nav>
+        </details>
+      </div>
       </div>
   </header>
   <main>

@@ -1,7 +1,7 @@
-<%- include('partials/header', { title: 'hello worlds', query: query, activeTags: activeTags, activeSort: activeSort }) %>
+<%- include('partials/header', { title: 'hello worlds', query: query, activeTags: activeTags, activeUsers: activeUsers, activeSort: activeSort }) %>
 <div class="home-layout">
 
-  <aside class="intro-panel"><details open><summary class="window-title-bar">introduction</summary><div class="window-contents">
+  <aside class="intro-panel"><details open><summary class="window-title-bar">introduction<div class="code-runner-window-controls" aria-hidden="true"><span>_</span><span>□</span><span>X</span></div></summary><div class="window-contents">
     <h2>welcome to &lthello worlds!&gt</h2>
     <p>a place where we ask and answer anything related to code. there are <%= posts.length %> posts in total for you to check out.</p><br>
     <% if (!user) { %>
@@ -10,12 +10,27 @@
           <br>
           <a href="/register">sign up</a>
     <% } %>
-    <a href="/about">about</a>
-  </div></details></aside>
-<div class="container">
+  </div></details>
+  <section class="trending-panel"><details open>
+    <summary class="window-title-bar">trending<div class="code-runner-window-controls" aria-hidden="true"><span>_</span><span>□</span><span>X</span></div></summary>
+    <div class="trending-scroll window-contents" data-show-more-group data-initial-count="10" data-batch-size="10">
+      <% (trendingPosts || []).forEach(function(post) { %>
+        <article class="trending-card" data-show-more-item>
+          <span class="post-type-badge"><%= post.postType %></span>
+          <h3><a href="/posts/<%= post._id %>"><%= post.title %></a></h3>
+          <p>↑ <%= post.score %> · <%= post.commentCount %> comments</p>
+          <small>by <a href="/users/<%= post.author %>"><%= post.authorRole === 'creator' ? '[creator] ' : post.authorRole === 'admin' ? '[admin] ' : '' %>@<%= post.authorName %></a></small>
+        </article>
+      <% }) %>
+      <% if (trendingPosts && trendingPosts.length > 10) { %><button type="button" class="btn show-more-btn" data-show-more>show more trending posts</button><% } %>
+    </div></details>
+  </section>
+</aside>
+<div class="container" data-show-more-group data-initial-count="5" data-batch-size="5">
 
   <div class="page-heading">
-    <% if (query || (activeTags && activeTags.length)) { %>
+    <% const userFilter = typeof activeUsers !== 'undefined' ? activeUsers.trim() : ''; %>
+    <% if (query || (activeTags && activeTags.length) || userFilter) { %>
       <h2>
         >> searching: 
         <% if (activeTags && activeTags.length) { %>
@@ -23,6 +38,8 @@
         <% } %>
         <% if (query && activeTags && activeTags.length) { %> > <% } %>
         <% if (query) { %>“<%= query %>”<% } %>
+        <% if (userFilter && (query || (activeTags && activeTags.length))) { %> > <% } %>
+        <% if (userFilter) { %>users: <%= userFilter %><% } %>
       </h2>
     <% } else { %>
       <% if (activeSort == "votes") {%>
@@ -38,12 +55,13 @@
   </div>
   <% if (posts.length === 0) { %>
     <p class="empty-state">
-      <% if (query || activeTags) { %>No posts match that search.<% } else { %>No posts yet. Be the first to start a thread.<% } %>
+      <% if (query || activeTags) { %>no posts match that search.<% } else { %>no posts yet. be the first to start a thread.<% } %>
     </p>
   <% } %>
 
   <% posts.forEach(function(post) { %>
-    <article class="post-card" data-post-card>
+    <article class="post-card" data-show-more-item>
+      <span class="post-type-badge"><%= post.postType %></span>
       
       <h2><a href="/posts/<%= post._id %>"><%= post.title %> </a></h2>
       <h3>by <a href="/users/<%= post.author %>"><%= post.authorRole === 'creator' ? '[creator] ' : post.authorRole === 'admin' ? '[admin] ' : '' %>@<%= post.authorName %></a></h3>
@@ -76,9 +94,11 @@
         <div class="post-meta">
       <div class="tag-list">
 
-        <% if (post.tags && post.tags.length) { %>
+        <% const specialPostTags = [...(post.isPinned ? ['pinned'] : []), ...(post.isMain ? ['main'] : []), ...(post.postType === 'question' ? [`${post.questionState || 'unsolved'}-question`] : [])]; %>
+        <% if ((post.tags && post.tags.length) || specialPostTags.length) { %>
+          <% specialPostTags.forEach(function(t) { %><a class="tag-pill special-tag" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-asterisk"></i> <%= tagLabel(t) %></a><% }) %>
           <% post.tags.forEach(function(t) { %>
-            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= t %></a>
+            <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= tagLabel(t) %></a>
           <% }) %>        
         <% } else {%>
           <p>this post has no <i class="bi bi-tags-fill"></i> tags.</p>
@@ -94,21 +114,40 @@
 
       </div>
       </div>
-      <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
-        <div class="post-owner-actions"><a class="btn btn-small" href="/posts/<%= post._id %>/edit">edit</a><form action="/posts/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Delete this post?');"><button class="btn btn-small">delete</button></form></div>
+      <% if (user) { %>
+      <div class="post-card-actions">
+        <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
+          <div class="post-owner-actions">
+            <a class="btn btn-small edit-and-del-buttons" href="/posts/<%= post._id %>/edit" style="align-content: center;"><i class="bi bi-pen"></i> edit</a>
+            <form class="delete-align" action="/posts/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Delete this post? This cannot be undone.');">
+              <button type="submit" class="btn btn-small edit-and-del-buttons"><i class="bi bi-trash"></i> delete</button>
+            </form>
+          </div>
+        <% } %>
+        <% if (user && post.author.toString() !== user.id) { %>
+          <details class="report-panel">
+            <summary>report</summary>
+            <form class="report-form" action="/posts/<%= post._id %>/report" method="POST">
+              <textarea name="reason" required maxlength="2000" placeholder="Why are you reporting this post?"></textarea>
+              <button type="submit" class="btn btn-small">send report</button>
+            </form>
+          </details>
+        <% } %>
+      </div>
       <% } %>
-      <% if (user && post.author.toString() !== user.id) { %><details><summary>report</summary><form action="/posts/<%= post._id %>/report" method="POST"><textarea name="reason" required maxlength="2000" placeholder="Reason"></textarea><button class="btn btn-small">send report</button></form></details><% } %>
     </article>
   <% }) %>
   <% if (posts.length > 5) { %>
-    <button type="button" class="btn show-more-btn" data-show-more hidden>show more posts</button>
+    <button type="button" class="btn show-more-btn" data-show-more>show more posts</button>
   <% } %>
 </div>
-  <aside class="side-panel-right"><details open><summary class="window-title-bar">notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></summary><div class="window-contents">
+  <aside class="side-panel-right"><details open><summary class="window-title-bar">notifications<div class="code-runner-window-controls" aria-hidden="true"><span>_</span><span>□</span><span>X</span></div><% if (unreadCount > 0) { %> <% } %></summary><div class="window-contents">
   <% if (!user) { %>
     <p class="notif-empty">log in to see your notifications.</p>
   <% } else if (notifications.length === 0) { %>
     <p class="notif-empty">you got mail! (well, not yet - nothing here.)</p>
+    <a href="/notifications">show all notifications</a>
+
   <% } else { %>
     <% if (unreadCount > 0) { %>
       <form action="/notifications/read-all" method="POST" style="margin-bottom:0.5rem;">
@@ -122,12 +161,12 @@
           <% if (n.type === 'report_response') { %><div class="notif-link-btn notif-response-text"><span class="notif-icon"><i class="bi bi-shield-check"></i></span><span class="notif-text"><%= n.message %></span></div><% } else { %><form action="/notifications/<%= n._id %>/read" method="POST" style="margin:0;">
             <button type="submit" class="notif-link-btn" title="<%= n.message %>">
               <span class="notif-icon">
-                <% if (n.type === 'comment') { %><i class="bi bi-chat-left-quote-fill"></i>
+                <% if (n.type === 'comment' || n.type === 'profile_comment') { %><i class="bi bi-chat-left-quote-fill"></i>
                 <% } else if (n.type === 'report_response') { %><i class="bi bi-shield-check"></i>
                 <% } else { %><i class="bi bi-arrow-up-circle-fill"></i><% } %>
               </span>
               <span class="notif-text"><%= n.message %></span>
-              <% if (!n.read) { %><span class="notif-dot"></span><% } %>
+              <% if (!n.read) { %><% } %>
             </button>
           </form><% } %>
         </li>
@@ -137,9 +176,19 @@
   <% } %>
 </div></details>
   <% if (user && ['admin','creator'].includes(user.role)) { %>
-    <details class="admin-log" open><summary class="window-title-bar">admin report log</summary><div class="window-contents">
-      <nav><a href="/admin/reports?sort=recent">recent</a> · <a href="/admin/reports?sort=user">by user</a> · <a href="/admin/reports?sort=post">by post</a> · <a href="/admin/reports">show all</a></nav>
-      <% (reports || []).forEach(function(report) { %><details class="report-item" open><summary>@<%= report.reporterName %> · <%= report.postTitle %></summary><p><%= report.reason %></p><% if (report.status === 'open') { %><form action="/reports/<%= report._id %>/respond" method="POST"><textarea name="response" maxlength="2000" placeholder="Response to reporter"></textarea><select name="decision"><option value="keep">keep post</option><option value="remove">remove post</option></select><button class="btn btn-small">respond</button></form><% } else { %><p><%= report.status %>: <%= report.response %></p><% } %></details><% }) %>
+    <details class="admin-log" open><summary class="window-title-bar">admin report log<div class="code-runner-window-controls" aria-hidden="true"><span>_</span><span>□</span><span>X</span></div></summary><div class="window-contents">
+      <nav><a href="/admin/reports?sort=recent">recent</a> · <a href="/admin/reports?sort=user">by user</a> · <a href="/admin/reports?sort=post">by post</a></nav>
+      <% (reports || []).forEach(function(report) { %>
+        <details class="report-item" open>
+          <summary>@<%= report.reporterName %> · <%= report.postTitle %></summary>
+          <p><%= report.reason %></p>
+          <%- include('partials/report-response', { report: report }) %>
+        </details>
+      <% }) %>
+        <% if (!reports || !reports.length) { %>
+          <p class="notif-empty">no open reports</p>
+        <% } %>
+      <a href="/admin/reports">show all reports</a>
     </div></details>
   <% } %>
   </aside>

@@ -1,7 +1,12 @@
 const runnableLanguages = {
-  javascript: { label: 'JavaScript', aliases: ['javascript', 'js', 'node', 'nodejs'] },
-  python: { label: 'Python', aliases: ['python', 'py'] },
-  typescript: { label: 'TypeScript', aliases: ['typescript', 'ts'] },
+  javascript: { label: 'javascript', aliases: ['javascript', 'js', 'node', 'nodejs'] },
+  python: { label: 'python', aliases: ['python', 'py'] },
+  typescript: { label: 'typescript', aliases: ['typescript', 'ts'] },
+  java: { label: 'java', aliases: ['java'] },
+  cpp: {label: 'cpp', aliases: ['cpp']},
+  c: {label: 'c', aliases: ['c']},
+  csharp: {label: 'csharp', aliases: ['csharp']},
+  bash: {label: 'bash', aliases: ['bash']}
 };
 
 function getCodeLanguage(codeElement) {
@@ -16,13 +21,13 @@ function getCodeLanguage(codeElement) {
 
 function formatRunResult(result) {
   const sections = [];
-  if (result.compilerOutput) sections.push(`Compiler output:\n${result.compilerOutput.trim()}`);
+  if (result.compilerOutput) sections.push(`compiler output:\n${result.compilerOutput.trim()}`);
   if (result.stdout.trim()) sections.push(result.stdout.trimEnd());
-  if (result.stderr.trim()) sections.push(`Errors:\n${result.stderr.trimEnd()}`);
-  if (result.signal) sections.push(`Stopped by signal: ${result.signal}`);
+  if (result.stderr.trim()) sections.push(`errors:\n${result.stderr.trimEnd()}`);
+  if (result.signal) sections.push(`stopped by signal: ${result.signal}`);
   else if (result.exitCode !== null) sections.push(`Exit code: ${result.exitCode}`);
-  if (result.outputTruncated) sections.push('Output truncated at 20,000 characters.');
-  return sections.join('\n\n') || 'Program finished without output.';
+  if (result.outputTruncated) sections.push('output truncated at 20,000 characters.');
+  return sections.join('\n\n') || 'program finished without output.';
 }
 
 document.querySelectorAll('.post-detail .md-content pre > code').forEach((codeElement) => {
@@ -66,7 +71,7 @@ document.querySelectorAll('.post-detail .md-content pre > code').forEach((codeEl
   inputArea.rows = 3;
   inputArea.maxLength = 2000;
   inputArea.setAttribute('aria-label', 'Optional standard input');
-  inputArea.placeholder = 'Text provided to the program as standard input';
+  inputArea.placeholder = 'text provided to the program as standard input';
   inputDetails.append(inputSummary, inputArea);
 
   const output = document.createElement('pre');
@@ -77,7 +82,7 @@ document.querySelectorAll('.post-detail .md-content pre > code').forEach((codeEl
 
   const notice = document.createElement('p');
   notice.className = 'code-runner-notice';
-  notice.textContent = 'Code is sent to Wandbox to run. Only run code you trust.';
+  notice.textContent = 'code is sent to wandbox to run. only run code you trust.';
 
   const runnerWindow = document.createElement('section');
   runnerWindow.className = 'code-runner-window';
@@ -116,7 +121,7 @@ document.querySelectorAll('.post-detail .md-content pre > code').forEach((codeEl
     runButton.textContent = 'running...';
     output.hidden = false;
     output.dataset.state = 'running';
-    output.textContent = 'Running code...';
+    output.textContent = 'running code...';
 
     try {
       const response = await fetch('/api/execute', {
@@ -129,13 +134,13 @@ document.querySelectorAll('.post-detail .md-content pre > code').forEach((codeEl
         }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Code execution failed.');
+      if (!response.ok) throw new Error(result.error || 'code execution failed.');
 
       output.dataset.state = result.exitCode === 0 ? 'success' : 'error';
       output.textContent = formatRunResult(result);
     } catch (error) {
       output.dataset.state = 'error';
-      output.textContent = error.message || 'Could not run this code. Please try again.';
+      output.textContent = error.message || 'could not run this code. please try again.';
     } finally {
       runButton.disabled = false;
       runButton.textContent = 'run code';

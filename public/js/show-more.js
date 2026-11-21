@@ -1,31 +1,23 @@
-const postCards = Array.from(document.querySelectorAll('[data-post-card]'));
-const showMoreButton = document.querySelector('[data-show-more]');
+document.querySelectorAll('[data-show-more-group]').forEach((group) => {
+  const items = Array.from(group.querySelectorAll('[data-show-more-item]'));
+  const button = group.querySelector('[data-show-more]');
+  if (!button || !items.length) return;
 
-if (showMoreButton && postCards.length > 5) {
-  const batchSize = 5;
-  let visibleCount = batchSize;
+  const initialCount = Number.parseInt(group.dataset.initialCount, 10) || 5;
+  const batchSize = Number.parseInt(group.dataset.batchSize, 10) || initialCount;
+  let visibleCount = Math.min(initialCount, items.length);
+  items.slice(visibleCount).forEach((item) => { item.hidden = true; });
 
-  function updateShowMoreButton() {
-    const remainingCount = postCards.length - visibleCount;
-    showMoreButton.textContent = `show more posts (${remainingCount} remaining)`;
-    showMoreButton.hidden = remainingCount <= 0;
-  }
-
-  postCards.slice(visibleCount).forEach((postCard) => {
-    postCard.hidden = true;
+  const update = () => {
+    const remaining = items.length - visibleCount;
+    button.textContent = `show more (${remaining} remaining)`;
+    button.hidden = remaining <= 0;
+  };
+  update();
+  button.addEventListener('click', () => {
+    const nextCount = Math.min(visibleCount + batchSize, items.length);
+    items.slice(visibleCount, nextCount).forEach((item) => { item.hidden = false; });
+    visibleCount = nextCount;
+    update();
   });
-
-  updateShowMoreButton();
-  showMoreButton.hidden = false;
-
-  showMoreButton.addEventListener('click', () => {
-    const nextVisibleCount = Math.min(visibleCount + batchSize, postCards.length);
-
-    postCards.slice(visibleCount, nextVisibleCount).forEach((postCard) => {
-      postCard.hidden = false;
-    });
-
-    visibleCount = nextVisibleCount;
-    updateShowMoreButton();
-  });
-}
+});

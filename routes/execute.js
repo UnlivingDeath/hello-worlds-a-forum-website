@@ -12,6 +12,11 @@ const compilers = {
   javascript: 'nodejs-20.17.0',
   python: 'cpython-3.13.8',
   typescript: 'typescript-5.6.2',
+  java: 'openjdk-jdk-22+36',
+  cpp: 'gcc-13.2.0',
+  c: 'gcc-13.2.0-c',
+  csharp: 'dotnetcore-8.0.402',
+  bash: 'bash'
 };
 
 const cleanupTimer = setInterval(() => {
@@ -39,7 +44,7 @@ router.post('/execute', async (req, res) => {
 
   const { language, code, stdin = '' } = req.body || {};
   if (!Object.hasOwn(compilers, language)) {
-    return res.status(400).json({ error: 'Choose JavaScript, Python, or TypeScript.' });
+    return res.status(400).json({ error: 'choose a valid language.' });
   }
   if (typeof code !== 'string' || !code.trim()) {
     return res.status(400).json({ error: 'Add some code before running it.' });

@@ -1,7 +1,8 @@
-const CURATED_TAGS = ['react', 'node', 'express', 'mongodb', 'javascript', 'css', 'homework', 'help'];
+const { TAGS, SPECIAL_TAGS } = require('../utils/tag-taxonomy');
 
 function attachAvailableTags(req, res, next) {
-    res.locals.availableTags = CURATED_TAGS;
+    res.locals.availableTags = TAGS;
+    res.locals.availableTagFilters = [...SPECIAL_TAGS, ...TAGS];
   next();
 }
 

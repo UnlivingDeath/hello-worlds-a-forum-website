@@ -2,10 +2,10 @@
 
 <div class="container chat-page">
   <div class="page-heading">
-    <h1>chat assistant</h1>
+    <h1>ai chat assistant</h1>
     <a class="btn btn-small" href="/chat">new conversation</a>
   </div>
-  <p class="chat-privacy-notice">AI is provided by Google Gemini’s free tier. Prompts, code, and forum content sent to Gemini may be used by Google to improve its products. Don’t submit secrets or private code.</p>
+  <p class="chat-privacy-notice">provided by google gemini’s free tier. prompts, code, and forum content sent to Gemini may be used by google to improve its products. don’t submit secrets or private code.</p>
 
   <div class="chat-shell" id="chat-app" data-conversation-id="<%= activeConversation ? activeConversation._id : '' %>">
     <aside class="chat-sidebar" aria-label="Conversations">
@@ -16,14 +16,14 @@
             <li class="<%= activeConversation && activeConversation._id.toString() === conversation._id.toString() ? 'active' : '' %>">
               <a href="/chat/<%= conversation._id %>">
                 <span><%= conversation.title %></span>
-                <small><%= conversation.mode === 'code-review' ? 'code review' : conversation.mode === 'qna' ? 'Q&A' : 'post assistant' %></small>
+                <small><%= conversation.mode === 'code-review' ? 'code review' : conversation.mode === 'qna' ? 'q&a' : 'post assistant' %></small>
               </a>
               <button type="button" class="chat-delete" data-delete-id="<%= conversation._id %>" aria-label="Delete <%= conversation.title %>">×</button>
             </li>
           <% }) %>
         </ul>
       <% } else { %>
-        <p class="helper-text">Your saved chats will appear here.</p>
+        <p class="helper-text">no conversations made. yet.</p>
       <% } %>
     </aside>
 
@@ -32,7 +32,7 @@
         <div class="chat-active-heading">
           <div>
             <h2><%= activeConversation.title %></h2>
-            <p><%= activeConversation.mode === 'code-review' ? 'code review' : activeConversation.mode === 'qna' ? 'Q&A from current posts' : 'post assistant · source: ' + (activeConversation.post ? '/posts/' + activeConversation.post : 'post unavailable') %></p>
+          <p><%= activeConversation.mode === 'code-review' ? 'review submitted code only' : activeConversation.mode === 'qna' ? 'fact-finding across posts, account roles, historical names, and opted-in activity' : 'post assistant · source: ' + (activeConversation.post ? '/posts/' + activeConversation.post : 'post unavailable') %></p>
           </div>
         </div>
       <% } else { %>
@@ -40,14 +40,14 @@
           <div class="field">
             <label for="chat-mode">choose a mode</label>
             <select id="chat-mode">
-              <option value="code-review">code review</option>
-              <option value="qna">Q&A from current posts</option>
-              <option value="post-assistant">post assistant</option>
+              <option value="code-review" <%= typeof initialMode !== 'undefined' && initialMode === 'code-review' ? 'selected' : '' %>>code review</option>
+              <option value="qna" <%= typeof initialMode !== 'undefined' && initialMode === 'qna' ? 'selected' : '' %>>q&a</option>
+              <option value="post-assistant" <%= typeof initialMode !== 'undefined' && initialMode === 'post-assistant' ? 'selected' : '' %>>post assistant</option>
             </select>
           </div>
           <div class="field" id="post-url-field" hidden>
             <label for="post-url">post URL</label>
-            <input id="post-url" type="url" placeholder="https://your-forum.example/posts/..." autocomplete="url" />
+            <input id="post-url" type="url" value="<%= typeof initialPostUrl !== 'undefined' ? initialPostUrl : '' %>" placeholder="https://your-forum.example/posts/..." autocomplete="url" />
           </div>
         </div>
       <% } %>
@@ -76,46 +76,46 @@
           <% }) %>
         <% } else { %>
           <div class="chat-empty" id="chat-empty">
-            <h2>what can I help with?</h2>
-            <p id="mode-description">Paste code for a review. Add instructions if you want a specific focus.</p>
+            <h2>what can i help with?</h2>
+            <p id="mode-description">paste code for a review. add instructions if you want a specific focus.</p>
           </div>
         <% } %>
       </div>
 
       <form class="chat-composer" id="chat-form">
         <div class="chat-quick-prompts" id="post-assistant-prompts" role="group" aria-label="Post assistant actions" <%= activeConversation && activeConversation.mode === 'post-assistant' ? '' : 'hidden' %>>
-          <button type="button" data-chat-prompt="Summarize this post and its comments.">summarize</button>
-          <button type="button" data-chat-prompt="Explain this post for a beginner using only its content and comments.">explain simply</button>
-          <button type="button" data-chat-prompt="Extract the key points and any steps described in this post and its comments.">key points</button>
-          <button type="button" data-chat-prompt="Suggest a clearer title and relevant tags based only on this post.">title and tags</button>
-          <button type="button" data-chat-prompt="Rewrite this post for clarity while preserving only the information it contains.">rewrite for clarity</button>
+          <button type="button" data-chat-prompt="summarize this post and its comments.">summarize</button>
+          <button type="button" data-chat-prompt="explain this post for a beginner using only its content and comments.">explain simply</button>
+          <button type="button" data-chat-prompt="extract the key points and any steps described in this post and its comments.">key points</button>
+          <button type="button" data-chat-prompt="suggest a clearer title and relevant tags based only on this post.">title and tags</button>
+          <button type="button" data-chat-prompt="rewrite this post for clarity while preserving only the information it contains.">rewrite for clarity</button>
         </div>
         <% if (activeConversation && activeConversation.mode === 'code-review') { %>
           <div class="field">
             <label for="chat-code">code</label>
-            <textarea id="chat-code" rows="8" maxlength="10000" placeholder="Paste code to review" required></textarea>
+            <textarea id="chat-code" rows="8" maxlength="10000" placeholder="paste code to review" required></textarea>
           </div>
           <div class="field">
             <label for="chat-instructions">extra instructions <span>(optional)</span></label>
-            <textarea id="chat-instructions" rows="2" maxlength="2000" placeholder="Focus on bugs, performance, readability…"></textarea>
+            <textarea id="chat-instructions" rows="2" maxlength="2000" placeholder="focus on bugs, performance, readability…"></textarea>
           </div>
         <% } else if (!activeConversation) { %>
           <div class="field" id="code-field">
             <label for="chat-code">code</label>
-            <textarea id="chat-code" rows="8" maxlength="10000" placeholder="Paste code to review"></textarea>
+            <textarea id="chat-code" rows="8" maxlength="10000" placeholder="paste code to review"></textarea>
           </div>
           <div class="field" id="instructions-field">
             <label for="chat-instructions">extra instructions <span>(optional)</span></label>
-            <textarea id="chat-instructions" rows="2" maxlength="2000" placeholder="Focus on bugs, performance, readability…"></textarea>
+            <textarea id="chat-instructions" rows="2" maxlength="2000" placeholder="focus on bugs, performance, readability…"></textarea>
           </div>
           <div class="field" id="prompt-field" hidden>
             <label for="chat-prompt">message</label>
-            <textarea id="chat-prompt" rows="3" maxlength="4000" placeholder="Ask a question"></textarea>
+            <textarea id="chat-prompt" rows="3" maxlength="4000" placeholder="ask a question"></textarea>
           </div>
         <% } else { %>
           <div class="field">
             <label for="chat-prompt">message</label>
-            <textarea id="chat-prompt" rows="3" maxlength="4000" placeholder="Ask a follow-up question" required></textarea>
+            <textarea id="chat-prompt" rows="3" maxlength="4000" placeholder="ask a follow-up question" required></textarea>
           </div>
         <% } %>
         <div class="chat-submit-row">
@@ -126,8 +126,8 @@
     </section>
   </div>
 </div>
-
 <script>
+
   window.chatPageData = <%- JSON.stringify(pageConversation).replace(/</g, '\\u003c') %>;
 </script>
 <script src="/js/chat.js"></script>

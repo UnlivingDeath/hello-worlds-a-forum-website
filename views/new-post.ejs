@@ -1,83 +1,65 @@
-<%- include('partials/header', { title: 'New post - hello worlds', query: '',editor: true }) %>
-
-<div class="container">
-  <h2>Start a new thread</h2>
-  <form class="form form-wide" action="/posts" method="POST">
-    <div class="field">
-      <label for="title">title</label>
-      <input id="title" name="title" maxlength="140" value="<%= title %>" required />
+<%- include('partials/header', { title: 'New post - hello worlds', query: '', editor: true }) %>
+<% const chosenType = typeof selectedType !== 'undefined' ? selectedType : 'discussion'; const previousPollOptions = typeof pollOptions !== 'undefined' ? pollOptions : []; %>
+<div class="container profile-page post-create-page post-editor-page">
+  <header class="post-editor-heading"><h1>start a new thread</h1><p>choose what kind of post you are creating.</p></header>
+  <form class="form form-wide profile-settings-panel post-create-form" action="/posts" method="POST">
+    <input type="hidden" name="postType" id="post-type-value" value="<%= chosenType %>">
+    <div class="post-type-tabs" role="tablist" aria-label="Post type">
+      <% [['discussion','discussion'],['poll','poll'],['question','question']].forEach(function(type) { %><button type="button" class="post-type-tab<%= chosenType === type[0] ? ' active' : '' %>" role="tab" aria-selected="<%= chosenType === type[0] ? 'true' : 'false' %>" data-post-type-tab="<%= type[0] %>"><%= type[1] %></button><% }) %>
     </div>
-    <div class="field">
-      <label for="body">post</label>
-      <textarea id="body" name="body" rows="10" data-markdown><%= body %></textarea>
-    </div>
-    <div class="field"><label><input type="checkbox" name="commentsDisabled"> disable comments</label></div>
-    <fieldset class="field"><legend>optional poll (leave question empty for no poll)</legend>
-      <label for="pollQuestion">question</label><input id="pollQuestion" name="pollQuestion" maxlength="200">
-      <% for (let i = 0; i < 8; i++) { %><label for="pollOption<%= i %>">option <%= i + 1 %><%= i < 2 ? ' (required when adding a poll)' : '' %></label><input id="pollOption<%= i %>" name="pollOptions" maxlength="100" <%= i < 2 ? 'data-poll-required' : '' %>><% } %>
-      <small>Single choice. Voters can change their vote.</small>
+    <div class="field"><label for="title">title</label><input id="title" name="title" maxlength="140" value="<%= title %>" required /></div>
+    <div class="field"><label for="body">post (optional)</label><textarea id="body" name="body" rows="10" data-markdown><%= body %></textarea></div>
+    <section class="post-type-panel" role="tabpanel" data-post-type-panel="discussion" <%= chosenType === 'discussion' ? '' : 'hidden' %>><p>share a topic, explanation, or discussion with the community.</p></section>
+    <fieldset class="field post-type-panel" role="tabpanel" data-post-type-panel="poll" <%= chosenType === 'poll' ? '' : 'hidden' %>><legend>poll options</legend>
+      <label for="pollQuestion">question (optional)</label><input id="pollQuestion" name="pollQuestion" maxlength="200" value="<%= typeof pollQuestion !== 'undefined' ? pollQuestion : '' %>" data-poll-question>
+      <% for (let i = 0; i < 8; i++) { %><label for="pollOption<%= i %>">option <%= i + 1 %><%= i < 2 ? ' (required)' : '' %></label><input id="pollOption<%= i %>" name="pollOptions" maxlength="100" value="<%= previousPollOptions[i] || '' %>" data-poll-option <%= i < 2 ? 'data-poll-required' : '' %>><% } %>
+      <small>choose one option. voters can change their vote.</small>
     </fieldset>
-
+    <section class="post-type-panel" role="tabpanel" data-post-type-panel="question" <%= chosenType === 'question' ? '' : 'hidden' %>><p>questions begin unsolved. you can mark yours solved when it has an answer.</p></section>
+    <div class="field editor-checkbox-field"><label class="profile-setting"><input type="checkbox" name="commentsDisabled" <%= typeof commentsDisabled !== 'undefined' && commentsDisabled ? 'checked' : '' %>><span>disable comments</span></label></div>
+    <% if (user && ['admin','creator'].includes(user.role)) { %><fieldset class="field moderator-post-settings"><legend>moderation tags</legend><label class="profile-setting"><input type="checkbox" name="isPinned" data-pinned-toggle <%= typeof isPinned !== 'undefined' && isPinned ? 'checked' : '' %>><span>pinned</span></label><label class="profile-setting"><input type="checkbox" name="isMain" data-main-toggle <%= typeof isMain !== 'undefined' && isMain ? 'checked' : '' %> <%= typeof isPinned !== 'undefined' && isPinned ? '' : 'disabled' %>><span>main (show pinned post on homepage)</span></label></fieldset><% } %>
     <div class="field">
       <label for="tag-select">tags</label>
-      <select id="tag-select" class="tag-dropdown-summary">
-        <option value="">choose a tag…</option>
-        <% availableTags.forEach(function(t) { %>
-          <option value="<%= t %>"><%= t %></option>
-        <% }) %>
-      </select>
-
-      <div id="tag-box" class="tag-box"></div>
-
-      <input type="hidden" id="tags" name="tags" value="<%= tagsInput %>" />
+      <select id="tag-select" class="tag-dropdown-summary"><option value="">choose a tag…</option><% availableTags.forEach(function(t) { %><option value="<%= t.value %>"><%= t.label %></option><% }) %></select>
+      <div id="tag-box" class="tag-box"></div><input type="hidden" id="tags" name="tags" value="<%= tagsInput %>" />
     </div>
-
-    <% if (error) { %>
-      <p class="error-text"><%= error %></p>
-    <% } %>
+    <% if (error) { %><p class="error-text"><%= error %></p><% } %>
     <button class="btn" type="submit">post</button>
   </form>
 </div>
-
 <script>
+  const typeInput = document.getElementById('post-type-value');
+  const typeTabs = Array.from(document.querySelectorAll('[data-post-type-tab]'));
+  const typePanels = Array.from(document.querySelectorAll('[data-post-type-panel]'));
+  const pollOptions = Array.from(document.querySelectorAll('[data-poll-option]'));
+  function selectPostType(type) {
+    typeInput.value = type;
+    typeTabs.forEach((tab) => { const active = tab.dataset.postTypeTab === type; tab.classList.toggle('active', active); tab.setAttribute('aria-selected', active ? 'true' : 'false'); });
+    typePanels.forEach((panel) => { panel.hidden = panel.dataset.postTypePanel !== type; });
+    pollOptions.forEach((option, index) => { option.required = type === 'poll' && index < 2; });
+  }
+  typeTabs.forEach((tab) => tab.addEventListener('click', () => selectPostType(tab.dataset.postTypeTab)));
+  selectPostType(typeInput.value);
+
   const select = document.getElementById('tag-select');
   const box = document.getElementById('tag-box');
   const hiddenInput = document.getElementById('tags');
-
   let selected = hiddenInput.value ? hiddenInput.value.split(',').filter(Boolean) : [];
-
   function render() {
     box.innerHTML = '';
     selected.forEach((tag) => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.textContent = "" + tag;
-
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'tag-chip-remove';
-      del.textContent = '×';
-      del.addEventListener('click', () => {
-        selected = selected.filter((t) => t !== tag);
-        render();
-      });
-
-      chip.appendChild(del);
-      box.appendChild(chip);
+      const chip = document.createElement('span'); chip.className = 'tag-chip'; chip.textContent = tag;
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'tag-chip-remove'; del.textContent = '×';
+      del.addEventListener('click', () => { selected = selected.filter((t) => t !== tag); render(); });
+      chip.appendChild(del); box.appendChild(chip);
     });
     hiddenInput.value = selected.join(',');
   }
-
-  select.addEventListener('change', () => {
-    const value = select.value;
-    if (value && !selected.includes(value)) {
-      selected.push(value);
-      render();
-    }
-    select.value = '';
-  });
-
+  select.addEventListener('change', () => { const value = select.value; if (value && !selected.includes(value)) { selected.push(value); render(); } select.value = ''; });
   render();
+  const pinnedToggle = document.querySelector('[data-pinned-toggle]');
+  const mainToggle = document.querySelector('[data-main-toggle]');
+  if (pinnedToggle && mainToggle) { mainToggle.disabled = !pinnedToggle.checked; pinnedToggle.addEventListener('change', () => { mainToggle.disabled = !pinnedToggle.checked; if (!pinnedToggle.checked) mainToggle.checked = false; }); }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
 <script src="/js/editor.js"></script>

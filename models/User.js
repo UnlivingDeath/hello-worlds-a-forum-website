@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema(
       postsUpvoted: { type: Boolean, default: true },
       comments: { type: Boolean, default: true },
       allowComments: { type: Boolean, default: true },
-      allowAiGathering: { type: Boolean, default: false },
+      allowAiGathering: { type: Boolean, default: true },
     },
   },
   { timestamps: true }

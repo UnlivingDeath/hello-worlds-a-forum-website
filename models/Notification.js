@@ -9,7 +9,7 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['comment', 'upvote_milestone', 'report_response'],
+      enum: ['comment', 'profile_comment', 'upvote_milestone', 'report_response'],
       required: true,
     },
     // The post the notification is about

@@ -1,7 +1,41 @@
 <%- include('partials/header', { title: 'Notifications', query: '' }) %>
-<div class="container"><h1>All notifications</h1>
-  <% if (!allNotifications.length) { %><p>No notifications.</p><% } %>
-  <ul class="notif-list"><% allNotifications.forEach(function(n) { %><li class="notif-item<%= n.read ? '' : ' notif-unread' %>"><% if (n.type === 'report_response') { %><span class="notif-link-btn"><%= n.message %></span><% } else { %><form action="/notifications/<%= n._id %>/read" method="POST"><button class="notif-link-btn"><%= n.message %></button></form><% } %></li><% }) %></ul>
-  <form action="/notifications/read-all" method="POST"><button class="btn">mark all read</button></form>
-  <form action="/notifications/clear-all" method="POST" onsubmit="return confirm('Clear all notifications?');"><button class="btn">clear all</button></form>
-</div><%- include('partials/footer') %>
+<div class="container notifications-page">
+  <header class="notifications-heading">
+    <div>
+      <p class="dashboard-eyebrow">inbox</p>
+      <h1>all notifications</h1>
+    </div>
+    <% if (allNotifications.length) { %><span class="dashboard-count"><%= allNotifications.length %> item<%= allNotifications.length === 1 ? '' : 's' %></span><% } %>
+  </header>
+  <% if (!allNotifications.length) { %>
+    <div class="notifications-empty"><i class="bi bi-envelope-open"></i><p>no notifications</p></div>
+  <% } else { %>
+    <div class="notifications-panel">
+      <ul class="notif-list">
+        <% allNotifications.forEach(function(n) { %>
+          <li class="notif-item<%= n.read ? '' : ' notif-unread' %>">
+            <% if (n.type === 'report_response') { %>
+              <div class="notif-link-btn notif-response-text">
+                <span class="notif-icon"><i class="bi bi-shield-check"></i></span>
+                <span class="notif-text"><%= n.message %></span>
+              </div>
+            <% } else { %>
+              <form action="/notifications/<%= n._id %>/read" method="POST">
+                <button type="submit" class="notif-link-btn">
+                  <span class="notif-icon"><i class="<%= n.type === 'comment' || n.type === 'profile_comment' ? 'bi bi-chat-left-quote-fill' : 'bi bi-arrow-up-circle-fill' %>"></i></span>
+                  <span class="notif-text"><%= n.message %></span>
+                  <% if (!n.read) { %><% } %>
+                </button>
+              </form>
+            <% } %>
+          </li>
+        <% }) %>
+      </ul>
+      <div class="notifications-actions">
+        <form action="/notifications/read-all" method="POST"><button type="submit" class="btn btn-small">mark all read</button></form>
+        <form action="/notifications/clear-all" method="POST" onsubmit="return confirm('Clear all notifications?');"><button type="submit" class="btn btn-small notif-clear-btn">clear all</button></form>
+      </div>
+    </div>
+  <% } %>
+</div>
+<%- include('partials/footer') %>

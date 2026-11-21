@@ -1,13 +1,78 @@
 <%- include('partials/header', { title: profile.username + ' - profile', query: '' }) %>
 <div class="container profile-page">
-  <h1><%= profile.role === 'creator' ? '[creator] ' : profile.role === 'admin' ? '[admin] ' : '' %><%= profile.username %></h1>
-  <p>AI information gathering: <strong><%= visibility.allowAiGathering ? 'allowed' : 'not allowed' %></strong></p>
-  <% if (isOwner) { %><details><summary>edit page</summary><form action="/users/<%= profile._id %>/settings" method="POST">
-    <% [['postsCreated','show posts created'],['postsUpvoted','show posts upvoted'],['comments','show comments'],['allowComments','allow profile comments'],['allowAiGathering','allow AI to gather information about me']].forEach(function(pair) { %><label class="field"><input type="checkbox" name="<%= pair[0] %>" <%= visibility[pair[0]] ? 'checked' : '' %>> <%= pair[1] %></label><% }) %>
-    <button class="btn">save settings</button></form></details><% } %>
-  <% if (visibility.postsCreated || isOwner) { %><section><h2>posts created</h2><% if (!created.length) { %><p>None shown.</p><% } %><% created.forEach(p => { %><article><a href="/posts/<%= p._id %>"><%= p.title %></a></article><% }) %></section><% } %>
-  <% if (visibility.postsUpvoted || isOwner) { %><section><h2>posts upvoted</h2><% if (!upvoted.length) { %><p>None shown.</p><% } %><% upvoted.forEach(p => { %><article><a href="/posts/<%= p._id %>"><%= p.title %></a></article><% }) %></section><% } %>
-  <% if (visibility.comments || isOwner) { %><section><h2>comments</h2><% if (!comments.length && !profileCommentsLeft.length) { %><p>None shown.</p><% } %><% comments.forEach(c => { %><article><a href="/posts/<%= c.post?._id %>#comment-<%= c._id %>"><%= c.post?.title || 'post unavailable' %></a><p><%= c.body %></p></article><% }) %><% profileCommentsLeft.forEach(c => { %><article>on <a href="/users/<%= c.profile?._id %>#profile-comments"><%= c.profile?.username || 'a profile' %>'s page</a><p><%= c.body %></p></article><% }) %></section><% } %>
-  <% if (visibility.allowComments || isOwner) { %><section id="profile-comments"><h2>profile comments</h2><% profileComments.forEach(c => { %><article><a href="/users/<%= c.author %>"><%= c.authorRole === 'creator' ? '[creator] ' : c.authorRole === 'admin' ? '[admin] ' : '' %>@<%= c.authorName %></a> · <%= new Date(c.createdAt).toLocaleString() %><p><%= c.body %></p></article><% }) %>
-    <% if (user) { %><form action="/users/<%= profile._id %>/comments" method="POST"><label for="profile-comment">leave a comment</label><textarea id="profile-comment" name="body" maxlength="2000" required></textarea><button class="btn">comment</button></form><% } else { %><p><a href="/login">Log in</a> to comment.</p><% } %></section><% } %>
-</div><%- include('partials/footer') %>
+  <header class="profile-header">
+    <div>
+      <h1><%= profile.role === 'creator' ? '[creator] ' : profile.role === 'admin' ? '[admin] ' : '' %><%= profile.username %></h1>
+      <p>ai information gathering: <strong><%= visibility.allowAiGathering ? 'allowed' : 'not allowed' %></strong></p>
+    </div>
+  </header>
+
+  <% if (isOwner) { %>
+    <details class="profile-settings-panel">
+      <summary>page settings</summary>
+      <form class="profile-settings-form" action="/users/<%= profile._id %>/settings" method="POST">
+        <% [['postsCreated','show posts created'],['postsUpvoted','show posts upvoted'],['comments','show comments'],['allowComments','allow profile comments'],['allowAiGathering','allow AI to gather information about me']].forEach(function(pair) { %>
+          <label class="profile-setting"><input type="checkbox" name="<%= pair[0] %>" <%= visibility[pair[0]] ? 'checked' : '' %>><span><%= pair[1] %></span></label>
+        <% }) %>
+        <button type="submit" class="btn btn-small">save settings</button>
+      </form>
+    </details>
+  <% } %>
+
+  <div class="profile-grid">
+    <% if (visibility.postsCreated || isOwner) { %>
+      <section class="profile-section">
+        <a href="/search?users=<%= profile.username %>"> posts created <span><%= createdCount %></span></a>
+        <% if (!createdCount) { %><p class="profile-empty">none shown</p><% } %>
+        <% created.forEach(p => { %><article class="profile-list-item"><a href="/posts/<%= p._id %>"><%= p.title %></a></article><% }) %>
+      </section>
+    <% } %>
+    <% if (visibility.postsUpvoted || isOwner) { %>
+      <section class="profile-section">
+        <h2>posts upvoted <span><%= upvotedCount %></span></h2>
+        <% if (!upvotedCount) { %><p class="profile-empty">none shown</p><% } %>
+        <% upvoted.forEach(p => { %><article class="profile-list-item"><a href="/posts/<%= p._id %>"><%= p.title %></a></article><% }) %>
+      </section>
+    <% } %>
+    <% if (visibility.comments || isOwner) { %>
+      <section class="profile-section profile-comments-section">
+        <h2>comments <span><%= activityCommentCount %></span></h2>
+        <% if (!activityCommentCount) { %><p class="profile-empty">none shown</p><% } %>
+        <% comments.forEach(c => { %>
+          <article class="profile-list-item">
+            <% if (c.commentKind === 'profile') { %><small>on <a href="/users/<%= c.profile?._id %>#profile-comments"><%= c.profile?.username || 'a profile' %>'s page</a></small><% } else { %><a href="/posts/<%= c.post?._id %>#comment-<%= c._id %>"><%= c.post?.title || 'post unavailable' %></a><% } %>
+            <p><%= c.body %></p>
+          </article>
+        <% }) %>
+      </section>
+    <% } %>
+  </div>
+
+  <% if (visibility.allowComments || isOwner) { %>
+    <section class="profile-wall" id="profile-comments">
+      <h2>profile comments <span><%= profileCommentCount %></span></h2>
+      <div class="profile-wall-list" data-show-more-group data-initial-count="10" data-batch-size="10">
+        <% profileComments.forEach(c => { %>
+          <article class="profile-wall-item" data-show-more-item>
+            <div class="profile-wall-meta">
+              <% if (c.author?._id) { %><a href="/users/<%= c.author._id %>"><%= c.author.role === 'creator' ? '[creator] ' : c.author.role === 'admin' ? '[admin] ' : '' %>@<%= c.authorName %></a><% } else { %><span>@<%= c.authorName %></span><% } %>
+              <time><%= new Date(c.createdAt).toLocaleString() %></time>
+            </div>
+            <p><%= c.body %></p>
+          </article>
+        <% }) %>
+              <% if (profileCommentCount > 10) { %><button type="button" class="btn show-more-btn" data-show-more style="margin-top: 15px;">show more profile comments</button><% } %>
+
+      </div>
+      <% if (user) { %>
+        <form class="profile-comment-form" action="/users/<%= profile._id %>/comments" method="POST">
+          <label for="profile-comment">leave a comment</label>
+          <textarea id="profile-comment" name="body" maxlength="2000" required></textarea>
+          <button type="submit" class="btn btn-small">comment</button>
+        </form>
+      <% } else { %><p class="profile-empty"><a href="/login">log in</a> to comment.</p><% } %>
+    </section>
+  <% } %>
+</div>
+<script src="/js/show-more.js"></script>
+<%- include('partials/footer') %>

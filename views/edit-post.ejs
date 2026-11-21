@@ -1,73 +1,37 @@
 <%- include('partials/header', { title: 'Edit post - hello worlds', query: '', editor: true }) %>
-
-<div class="container">
-  <h1>Edit thread</h1>
-  <form class="form form-wide" action="/posts/<%= post._id %>/edit" method="POST">
-    <div class="field">
-      <label for="title"><i class="bi bi-text-left"></i> title</label>
-      <input id="title" name="title" maxlength="140" value="<%= post.title %>" required />
-    </div>
-    <div class="field"><label><input type="checkbox" name="commentsDisabled" <%= post.commentsDisabled ? 'checked' : '' %>> disable comments</label></div>
-    <div class="field">
-      <label for="body"><i class="bi bi-body-text"></i> post</label>
-      <textarea id="body" name="body" rows="10" data-markdown><%= post.body %></textarea>
-    </div>
-
-    <div class="field">
-      <label for="tag-select"><i class="bi bi-tags-fill"></i> tags</label>
-      <select id="tag-select" class="tag-dropdown-summary">
-        <option value="">choose a tag…</option>
-        <% availableTags.forEach(function(t) { %>
-          <option value="<%= t %>">#<%= t %></option>
-        <% }) %>
-      </select>
-      <div id="tag-box" class="tag-box"></div>
-      <input type="hidden" id="tags" name="tags" value="<%= tagsInput %>" />
-    </div>
-
-    <% if (error) { %>
-      <p class="error-text"><%= error %></p>
-    <% } %>
-    <button class="btn" type="submit"><i class="bi bi-floppy2-fill"></i> save</button>
+<div class="container profile-page edit-post-page post-editor-page">
+  <header class="post-editor-heading"><h1>edit post</h1><p>post type: <strong><%= post.postType %></strong>. cannot be changed.</p></header>
+  <form class="form form-wide profile-settings-panel edit-post-form" action="/posts/<%= post._id %>/edit" method="POST">
+    <div class="field"><label for="title">title</label><input id="title" name="title" maxlength="140" value="<%= post.title %>" required /></div>
+    <div class="field"><label for="body">post (optional)</label><textarea id="body" name="body" rows="10" data-markdown><%= post.body %></textarea></div>
+    <div class="field editor-checkbox-field"><label class="profile-setting"><input type="checkbox" name="commentsDisabled" <%= post.commentsDisabled ? 'checked' : '' %>><span>disable comments</span></label></div>
+    <% if (post.postType === 'question') { %><div class="field"><label for="questionState">question status</label><select id="questionState" class="tag-dropdown-summary" name="questionState"><option value="unsolved" <%= post.questionState !== 'solved' ? 'selected' : '' %>>unsolved</option><option value="solved" <%= post.questionState === 'solved' ? 'selected' : '' %>>solved</option></select></div><% } %>
+    <% if (user && ['admin','creator'].includes(user.role)) { %><fieldset class="field moderator-post-settings"><legend>moderation tags</legend><label class="profile-setting"><input type="checkbox" name="isPinned" data-pinned-toggle <%= post.isPinned ? 'checked' : '' %>><span>pinned</span></label><label class="profile-setting"><input type="checkbox" name="isMain" data-main-toggle <%= post.isMain ? 'checked' : '' %> <%= post.isPinned ? '' : 'disabled' %>><span>main (show pinned post on homepage)</span></label></fieldset><% } %>
+    <div class="field"><label for="tag-select">tags</label><select id="tag-select" class="tag-dropdown-summary"><option value="">choose a tag…</option><% availableTags.forEach(function(t) { %><option value="<%= t.value %>"><%= t.label %></option><% }) %></select><div id="tag-box" class="tag-box"></div><input type="hidden" id="tags" name="tags" value="<%= tagsInput %>" /></div>
+    <% if (error) { %><p class="error-text"><%= error %></p><% } %>
+    <div class="edit-post-actions"><a class="btn" href="/posts/<%= post._id %>">cancel</a><button class="btn" type="submit">save</button></div>
   </form>
 </div>
-
 <script>
   const select = document.getElementById('tag-select');
   const box = document.getElementById('tag-box');
   const hiddenInput = document.getElementById('tags');
   let selected = hiddenInput.value ? hiddenInput.value.split(',').filter(Boolean) : [];
-
   function render() {
     box.innerHTML = '';
     selected.forEach((tag) => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
-      chip.textContent = tag;
-      const del = document.createElement('button');
-      del.type = 'button';
-      del.className = 'tag-chip-remove';
-      del.textContent = '×';
-      del.addEventListener('click', () => {
-        selected = selected.filter((t) => t !== tag);
-        render();
-      });
-      chip.appendChild(del);
-      box.appendChild(chip);
+      const chip = document.createElement('span'); chip.className = 'tag-chip'; chip.textContent = tag;
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'tag-chip-remove'; del.textContent = '×';
+      del.addEventListener('click', () => { selected = selected.filter((t) => t !== tag); render(); });
+      chip.appendChild(del); box.appendChild(chip);
     });
     hiddenInput.value = selected.join(',');
   }
-
-  select.addEventListener('change', () => {
-    const value = select.value;
-    if (value && !selected.includes(value)) {
-      selected.push(value);
-      render();
-    }
-    select.value = '';
-  });
-
+  select.addEventListener('change', () => { const value = select.value; if (value && !selected.includes(value)) { selected.push(value); render(); } select.value = ''; });
   render();
+  const pinnedToggle = document.querySelector('[data-pinned-toggle]');
+  const mainToggle = document.querySelector('[data-main-toggle]');
+  if (pinnedToggle && mainToggle) { mainToggle.disabled = !pinnedToggle.checked; pinnedToggle.addEventListener('change', () => { mainToggle.disabled = !pinnedToggle.checked; if (!pinnedToggle.checked) mainToggle.checked = false; }); }
 </script>
 <script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
 <script src="/js/editor.js"></script>
