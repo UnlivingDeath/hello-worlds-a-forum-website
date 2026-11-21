@@ -259,7 +259,7 @@ router.post('/posts/:id/comments', requireAuth, async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     if (!post) return res.status(404).render('404');
-    if (post.commentsDisabled) return res.status(403).send('Comments are disabled for this post');
+    if (post.commentsDisabled) return res.status(403).send('comments are disabled for this post');
 
     const body = (req.body.body || '').trim();
 

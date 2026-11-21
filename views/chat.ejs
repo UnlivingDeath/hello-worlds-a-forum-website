@@ -16,7 +16,7 @@
             <li class="<%= activeConversation && activeConversation._id.toString() === conversation._id.toString() ? 'active' : '' %>">
               <a href="/chat/<%= conversation._id %>">
                 <span><%= conversation.title %></span>
-                <small><%= conversation.mode === 'code-review' ? 'code review' : conversation.mode === 'qna' ? 'Q&A' : 'post assistant' %></small>
+                <small><%= conversation.mode === 'code-review' ? 'code review' : conversation.mode === 'qna' ? 'q&a' : 'post assistant' %></small>
               </a>
               <button type="button" class="chat-delete" data-delete-id="<%= conversation._id %>" aria-label="Delete <%= conversation.title %>">×</button>
             </li>
@@ -41,7 +41,7 @@
             <label for="chat-mode">choose a mode</label>
             <select id="chat-mode">
               <option value="code-review" <%= typeof initialMode !== 'undefined' && initialMode === 'code-review' ? 'selected' : '' %>>code review</option>
-              <option value="qna" <%= typeof initialMode !== 'undefined' && initialMode === 'qna' ? 'selected' : '' %>>Q&A</option>
+              <option value="qna" <%= typeof initialMode !== 'undefined' && initialMode === 'qna' ? 'selected' : '' %>>q&a</option>
               <option value="post-assistant" <%= typeof initialMode !== 'undefined' && initialMode === 'post-assistant' ? 'selected' : '' %>>post assistant</option>
             </select>
           </div>

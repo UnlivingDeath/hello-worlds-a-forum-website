@@ -51,7 +51,7 @@ router.post('/users/:id/comments', requireAuth, async (req, res) => {
   const profile = await User.findById(req.params.id).select('username profileVisibility').lean();
   const body = (req.body.body || '').trim();
   if (!profile) return res.status(404).render('404');
-  if (!(profile.profileVisibility?.allowComments ?? true)) return res.status(403).send('Profile comments are disabled');
+  if (!(profile.profileVisibility?.allowComments ?? true)) return res.status(403).send('profile comments are disabled');
   if (!body || body.length > 2000) return res.redirect(`/users/${profile._id}`);
   await ProfileComment.create({ profile: profile._id, author: req.currentUser._id, authorName: req.currentUser.username, body });
   if (profile._id.toString() !== req.currentUser._id.toString()) {
