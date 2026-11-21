@@ -24,21 +24,36 @@ router.post('/reports/:id/respond', requireAuth, requireRole('admin', 'creator')
   if (!existingReport || existingReport.status !== 'open') return res.redirect('/');
   const response = (req.body.response || '').trim().slice(0, 2000);
   const remove = req.body.decision === 'remove';
+  const post = await Post.findById(existingReport.post);
+  if (!post) {
+    await Report.deleteMany({ post: existingReport.post });
+    await Notification.create({
+      recipient: existingReport.reporter,
+      type: 'report_response',
+      post: existingReport.post,
+      postTitle: existingReport.postTitle,
+      actorName: req.currentUser.username,
+      message: 'Your report was reviewed. The reported post is no longer available.',
+      link: '#',
+    });
+    return res.redirect('/');
+  }
   const report = await Report.findOneAndUpdate(
     { _id: existingReport._id, status: 'open' },
     { $set: { response, status: remove ? 'removed' : 'kept', resolvedBy: req.currentUser._id } },
     { new: true }
   );
   if (!report) return res.redirect('/');
-  const post = await Post.findById(report.post);
   if (remove && post) {
     const relatedReports = await Report.find({ post: post._id, status: 'open' }).select('_id reporter post postTitle').lean();
     await Promise.all([Comment.deleteMany({ post: post._id }), post.deleteOne()]);
-    await Report.updateMany({ post: post._id, status: 'open' }, { $set: { status: 'removed', response: response || 'This post was removed after review.', resolvedBy: req.currentUser._id } });
+    await Report.deleteMany({ post: post._id });
     await Promise.all(relatedReports.filter((item) => item._id.toString() !== report._id.toString()).map((item) => Notification.create({
       recipient: item.reporter, type: 'report_response', post: item.post, postTitle: item.postTitle,
       actorName: req.currentUser.username, message: `Your reported post was removed${response ? `: ${response}` : '.'}`, link: '#',
     })));
+  } else {
+    await Report.deleteOne({ _id: report._id });
   }
   await Notification.create({ recipient: report.reporter, type: 'report_response', post: report.post, postTitle: report.postTitle,
     actorName: req.currentUser.username, message: `${remove ? 'Your reported post was removed' : 'Your report was reviewed and the post was kept'}${response ? `: ${response}` : '.'}`, link: '#' });
@@ -47,7 +62,7 @@ router.post('/reports/:id/respond', requireAuth, requireRole('admin', 'creator')
 
 router.get('/admin/reports', requireAuth, requireRole('admin', 'creator'), async (req, res) => {
   const sort = ['user', 'post', 'recent'].includes(req.query.sort) ? req.query.sort : 'recent';
-  let reports = await Report.find().sort({ createdAt: -1 }).lean();
+  let reports = await Report.find({ status: 'open' }).sort({ createdAt: -1 }).lean();
   if (sort === 'user') reports = reports.sort((a, b) => a.reporterName.localeCompare(b.reporterName));
   if (sort === 'post') reports = reports.sort((a, b) => a.postTitle.localeCompare(b.postTitle));
   res.render('reports', { reports, sort });

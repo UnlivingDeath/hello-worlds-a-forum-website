@@ -4,7 +4,10 @@ const Comment = require('../models/Comment');
 const User = require('../models/User');
 const Notification = require('../models/Notification');
 const Report = require('../models/Report');
+const PostVoteEvent = require('../models/PostVoteEvent');
 const { requireAuth, isModerator } = require('../middleware/auth');
+const { normalizeTag } = require('../utils/tag-taxonomy');
+const getTrendingPosts = require('../services/trending');
 
 
 const router = express.Router();
@@ -30,12 +33,44 @@ async function addAuthorRoles(posts) {
   posts.forEach((post) => { post.authorRole = roles.get(post.author.toString()) || 'user'; });
 }
 
+async function findSearchPosts(filter, sort) {
+  const pinned = await Post.find({ $and: [filter, { isPinned: true }] }).sort({ createdAt: 1 }).limit(100);
+  const normalLimit = Math.max(0, 100 - pinned.length);
+  const normal = normalLimit
+    ? await Post.find({ $and: [filter, { isPinned: { $ne: true } }] }).sort(buildSort(sort)).limit(normalLimit)
+    : [];
+  return [...pinned, ...normal];
+}
+
+async function findIndexPosts(sort) {
+  const pinned = await Post.find({ isPinned: true, isMain: true }).sort({ createdAt: 1 }).limit(100);
+  const normalLimit = Math.max(0, 100 - pinned.length);
+  const normal = normalLimit
+    ? await Post.find({ isPinned: { $ne: true } }).sort(buildSort(sort)).limit(normalLimit)
+    : [];
+  return [...pinned, ...normal];
+}
+
+function parseTags(raw) {
+  const values = (Array.isArray(raw) ? raw : String(raw || '').split(',')).map((value) => String(value).trim()).filter(Boolean);
+  const tags = [...new Set(values.map(normalizeTag).filter(Boolean))];
+  return { tags, invalid: values.filter((value) => !normalizeTag(value)) };
+}
+
+function escapeRegex(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 router.get('/', async (req, res) => {
   const sort = req.query.sort || 'latest';
-  const posts = await Post.find().sort(buildSort(sort)).limit(100);
+  const [posts, trendingPosts] = await Promise.all([
+    findIndexPosts(sort),
+    getTrendingPosts(100),
+  ]);
   await addAuthorRoles(posts);
-  const reports = isModerator(req.currentUser) ? await Report.find().sort({ createdAt: -1 }).limit(10).lean() : [];
-  res.render('index', { posts, query: '', activeTags: [], activeSort: sort, reports });
+  await addAuthorRoles(trendingPosts);
+  const reports = isModerator(req.currentUser) ? await Report.find({ status: 'open' }).sort({ createdAt: -1 }).limit(10).lean() : [];
+  res.render('index', { posts, trendingPosts, query: '', activeTags: [], activeUsers: '', activeSort: sort, reports });
 });
 
 
@@ -59,6 +94,7 @@ router.post('/posts/:id/vote', requireAuth, async (req, res) => {
 
   const userId = req.session.user.id;
   const existing = post.votes.find((v) => v.user.toString() === userId);
+  const eventDirection = existing && existing.value === value ? 'remove' : value === 1 ? 'upvote' : 'downvote';
   const scoreBefore = post.score;
 
   if (existing && existing.value === value) {
@@ -73,6 +109,8 @@ router.post('/posts/:id/vote', requireAuth, async (req, res) => {
   }
 
   await post.save();
+  await PostVoteEvent.create({ post: post._id, user: userId, source: 'post', direction: eventDirection })
+    .catch((error) => console.error('Unable to record post vote activity:', error.message));
 
   
   
@@ -107,23 +145,41 @@ router.post('/posts/:id/vote', requireAuth, async (req, res) => {
 router.get('/search', async (req, res) => {
   const q = (req.query.q || '').trim();
   const sort = req.query.sort || 'latest';
+  const activeUsers = typeof req.query.users === 'string'
+    ? req.query.users.trim()
+    : Array.isArray(req.query.users) ? req.query.users.join(', ').trim() : '';
+  const usernames = [...new Set(activeUsers.split(',').map((username) => username.trim().replace(/^@/, '')).filter(Boolean))];
 
-  let tags = req.query.tags || [];
-  if (typeof tags === 'string') tags = [tags];
-  if (req.query.tag) tags.push(req.query.tag);
-  tags = [...new Set(tags.map((t) => t.trim().toLowerCase()).filter(Boolean))];
+  let requestedTags = req.query.tags || [];
+  if (typeof requestedTags === 'string') requestedTags = [requestedTags];
+  if (req.query.tag) requestedTags.push(req.query.tag);
+  const tags = [...new Set(requestedTags.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean))];
 
   const filter = {};
-  if (tags.length) filter.tags = { $all: tags };
+  if (usernames.length) {
+    const accounts = await User.find({
+      username: { $in: usernames.map((username) => new RegExp(`^${escapeRegex(username)}$`, 'i')) },
+    }).select('_id').lean();
+    filter.author = { $in: accounts.map((account) => account._id) };
+  }
+  const languageTags = tags.map(normalizeTag).filter(Boolean);
+  if (languageTags.length) filter.tags = { $all: [...new Set(languageTags)] };
+  if (tags.includes('pinned')) filter.isPinned = true;
+  if (tags.includes('main')) filter.isMain = true;
+  if (tags.includes('solved-question')) { filter.postType = 'question'; filter.questionState = 'solved'; }
+  if (tags.includes('unsolved-question')) { filter.postType = 'question'; filter.questionState = 'unsolved'; }
+
   if (q) {
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const regex = new RegExp(escapeRegex(q), 'i');
     filter.$or = [{ title: regex }, { body: regex }];
   }
 
-  const posts = await Post.find(filter).sort(buildSort(sort)).limit(100);
+  const posts = await findSearchPosts(filter, sort);
   await addAuthorRoles(posts);
-  const reports = isModerator(req.currentUser) ? await Report.find().sort({ createdAt: -1 }).limit(10).lean() : [];
-  res.render('index', { posts, query: q, activeTags: tags, activeSort: sort, reports });
+  const trendingPosts = await getTrendingPosts(100);
+  await addAuthorRoles(trendingPosts);
+  const reports = isModerator(req.currentUser) ? await Report.find({ status: 'open' }).sort({ createdAt: -1 }).limit(10).lean() : [];
+  res.render('index', { posts, trendingPosts, query: q, activeTags: tags, activeUsers, activeSort: sort, reports });
 });
 
 
@@ -131,36 +187,37 @@ router.get('/search', async (req, res) => {
 
 
 router.get('/posts/new', requireAuth, async (req, res) => {
-  res.render('new-post', { error: null, title: '', body: '', tagsInput: '' });
+  res.render('new-post', { error: null, title: '', body: '', tagsInput: '', selectedType: 'discussion', pollQuestion: '', pollOptions: [] });
 });
-
-function parseTags(raw) {
-  if (!raw) return [];
-  const tags = raw
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean);
-  return [...new Set(tags)];
-}
 
 router.post('/posts', requireAuth, async (req, res) => {
   const title = (req.body.title || '').trim();
   const body = (req.body.body || '').trim();
-  const tags = parseTags(req.body.tags);
+  const { tags, invalid: invalidTags } = parseTags(req.body.tags);
+  const postType = ['discussion', 'poll', 'question'].includes(req.body.postType) ? req.body.postType : 'discussion';
   const commentsDisabled = req.body.commentsDisabled === 'on';
   const pollQuestion = (req.body.pollQuestion || '').trim();
   const pollOptions = Array.isArray(req.body.pollOptions) ? req.body.pollOptions : req.body.pollOptions ? [req.body.pollOptions] : [];
   const options = pollOptions.map((title) => ({ title: String(title).trim(), votes: [] })).filter((option) => option.title).slice(0, 8);
-  if (pollQuestion && (options.length < 2 || pollOptions.length > 8)) {
-    return res.status(400).render('new-post', { error: 'A poll needs a question and between 2 and 8 non-empty options.', title, body, tagsInput: req.body.tags || '' });
+  if (invalidTags.length) {
+    return res.status(400).render('new-post', { error: `Unsupported tag: ${invalidTags[0]}`, title, body, tagsInput: req.body.tags || '', selectedType: postType, pollQuestion, pollOptions, commentsDisabled, isPinned: req.body.isPinned === 'on', isMain: req.body.isMain === 'on' });
+  }
+  if (postType === 'poll' && (!String(pollOptions[0] || '').trim() || !String(pollOptions[1] || '').trim() || options.length < 2 || options.length > 8 || pollOptions.length > 8)) {
+    return res.status(400).render('new-post', { error: 'A poll needs between 2 and 8 non-empty options.', title, body, tagsInput: req.body.tags || '', selectedType: postType, pollQuestion, pollOptions, commentsDisabled, isPinned: req.body.isPinned === 'on', isMain: req.body.isMain === 'on' });
   }
 
 
-  if (!title || !body) {
+  if (!title) {
     return res.render('new-post', {
-      error: 'Title and post are both required',
+      error: 'A title is required',
       title, body,
       tagsInput: req.body.tags || '',
+      selectedType: postType,
+      pollQuestion,
+      pollOptions,
+      commentsDisabled,
+      isPinned: req.body.isPinned === 'on',
+      isMain: req.body.isMain === 'on',
     });
   }
 
@@ -170,8 +227,11 @@ router.post('/posts', requireAuth, async (req, res) => {
     tags,
     author: req.session.user.id,
     authorName: req.session.user.username,
+    postType,
+    ...(postType === 'question' ? { questionState: 'unsolved' } : {}),
+    ...(isModerator(req.currentUser) ? { isPinned: req.body.isPinned === 'on', isMain: req.body.isPinned === 'on' && req.body.isMain === 'on' } : {}),
     commentsDisabled,
-    ...(pollQuestion && options.length >= 2 ? { poll: { question: pollQuestion.slice(0, 200), options } } : {}),
+    ...(postType === 'poll' ? { poll: { question: pollQuestion.slice(0, 200), options } } : {}),
   });
 
   res.redirect(`/posts/${post._id}`);
@@ -188,7 +248,8 @@ router.get('/posts/:id', async (req, res) => {
     comments.forEach((comment) => { comment.authorRole = roles.get(comment.author.toString()) || 'user'; });
     const authorAccount = await User.findById(post.author).select('role').lean();
     post.authorRole = authorAccount?.role || 'user';
-    res.render('post', { post, comments, error: null});
+    const reports = isModerator(req.currentUser) ? await Report.find({ status: 'open' }).sort({ createdAt: -1 }).limit(10).lean() : [];
+    res.render('post', { post, comments, reports, error: null});
   } catch (err) {
     res.status(404).render('404');
   }
@@ -256,16 +317,25 @@ router.post('/posts/:id/edit', requireAuth, async (req, res) => {
 
   const title = (req.body.title || '').trim();
   const body = (req.body.body || '').trim();
-  const tags = parseTags(req.body.tags);
-
-  if (!title || !body) {
-    return res.render('edit-post', { post, error: 'Title and post are both required', tagsInput: req.body.tags || '' });
-  }
-
+  const { tags, invalid: invalidTags } = parseTags(req.body.tags);
   post.title = title;
   post.body = body;
-  post.tags = tags;
   post.commentsDisabled = req.body.commentsDisabled === 'on';
+  if (post.postType === 'question' && ['solved', 'unsolved'].includes(req.body.questionState)) post.questionState = req.body.questionState;
+  if (isModerator(req.currentUser)) {
+    post.isPinned = req.body.isPinned === 'on';
+    post.isMain = post.isPinned && req.body.isMain === 'on';
+  }
+
+  if (invalidTags.length) {
+    return res.status(400).render('edit-post', { post, error: `Unsupported tag: ${invalidTags[0]}`, tagsInput: req.body.tags || '' });
+  }
+
+  if (!title) {
+    return res.render('edit-post', { post, error: 'A title is required', tagsInput: req.body.tags || '' });
+  }
+
+  post.tags = tags;
   post.editedAt = new Date();
   await post.save();
 
@@ -280,6 +350,7 @@ router.post('/posts/:id/delete', requireAuth, async (req, res) => {
   }
 
   await Comment.deleteMany({ post: post._id });
+  await Report.deleteMany({ post: post._id });
   await post.deleteOne();
 
   res.redirect('/');
@@ -287,9 +358,14 @@ router.post('/posts/:id/delete', requireAuth, async (req, res) => {
 
 router.post('/posts/:id/poll/vote', requireAuth, async (req, res) => {
   const post = await Post.findById(req.params.id);
-  if (!post || !post.poll?.options?.length) return res.status(404).render('404');
-  const index = Number.parseInt(req.body.option, 10);
-  if (!Number.isInteger(index) || index < 0 || index >= post.poll.options.length) return res.status(400).send('Choose a valid option');
+  if (!post || post.postType !== 'poll' || !post.poll?.options?.length) return res.status(404).render('404');
+  const removingVote = req.body.action === 'remove';
+  const index = removingVote ? -1 : Number.parseInt(req.body.option, 10);
+  if (!removingVote && (!Number.isInteger(index) || index < 0 || index >= post.poll.options.length)) {
+    return res.status(400).send('Choose a valid option');
+  }
+  const previousIndex = post.poll.options.findIndex((option) => option.votes.some((id) => id.toString() === req.currentUser._id.toString()));
+  if (removingVote && previousIndex < 0) return res.redirect(req.get('Referer') || `/posts/${post._id}`);
   await Post.updateOne({ _id: post._id, 'poll.options.1': { $exists: true } }, [{
     $set: { 'poll.options': {
       $map: {
@@ -300,13 +376,17 @@ router.post('/posts/:id/poll/vote', requireAuth, async (req, res) => {
             vars: { option: { $arrayElemAt: ['$poll.options', '$$optionIndex'] } },
             in: { $mergeObjects: ['$$option', { votes: { $concatArrays: [
               { $filter: { input: '$$option.votes', as: 'voter', cond: { $ne: ['$$voter', req.currentUser._id] } } },
-              { $cond: [{ $eq: ['$$optionIndex', index] }, [req.currentUser._id], []] },
+              { $cond: [{ $and: [{ $eq: ['$$optionIndex', index] }, { $eq: [removingVote, false] }] }, [req.currentUser._id], []] },
             ] } }] },
           },
         },
       },
     } },
   }]);
+  if (!removingVote && previousIndex !== index) {
+    await PostVoteEvent.create({ post: post._id, user: req.currentUser._id, source: 'poll', direction: 'poll' })
+      .catch((error) => console.error('Unable to record poll vote activity:', error.message));
+  }
   res.redirect(req.get('Referer') || `/posts/${post._id}`);
 });
 

@@ -2,6 +2,10 @@ const mongoose = require('mongoose');
 
 const postSchema = new mongoose.Schema(
   {
+    postType: { type: String, enum: ['discussion', 'poll', 'question'], default: 'discussion' },
+    questionState: { type: String, enum: ['unsolved', 'solved'], default: undefined },
+    isPinned: { type: Boolean, default: false },
+    isMain: { type: Boolean, default: false },
     title: {
       type: String,
       required: true,
@@ -10,9 +14,9 @@ const postSchema = new mongoose.Schema(
     },
     body: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 10000,
+      default: '',
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,
@@ -62,5 +66,6 @@ const postSchema = new mongoose.Schema(
 
 
 postSchema.index({ title: 'text', body: 'text' });
+postSchema.index({ isPinned: 1, isMain: 1, createdAt: 1 });
 
 module.exports = mongoose.model('Post', postSchema);

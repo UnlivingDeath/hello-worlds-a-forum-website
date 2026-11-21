@@ -1,1 +1,14 @@
-<% if (report.status === 'open') { %><form action="/reports/<%= report._id %>/respond" method="POST"><textarea name="response" maxlength="2000" placeholder="Response to reporter"></textarea><select name="decision"><option value="keep">keep post</option><option value="remove">remove post</option></select><button class="btn btn-small">respond</button></form><% } else { %><p><%= report.status %>: <%= report.response %></p><% } %>
+<% if (report.status === 'open') { %>
+  <form class="report-response-form" action="/reports/<%= report._id %>/respond" method="POST">
+    <textarea name="response" maxlength="2000" required placeholder="Response to reporter"></textarea>
+    <div class="report-response-controls">
+      <select name="decision">
+        <option value="keep">keep post</option>
+        <option value="remove">remove post</option>
+      </select>
+      <button type="submit" class="btn btn-small">respond</button>
+    </div>
+  </form>
+<% } else { %>
+  <p><%= report.status %>: <%= report.response %></p>
+<% } %>

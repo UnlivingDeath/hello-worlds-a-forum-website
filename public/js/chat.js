@@ -16,9 +16,9 @@
   const postAssistantPrompts = document.getElementById('post-assistant-prompts');
 
   const descriptions = {
-    'code-review': 'Paste code for a review. Add instructions if you want a specific focus.',
-    qna: 'Ask about current posts. Answers link to matching posts and show their average positive rating.',
-    'post-assistant': 'Choose a writing action or ask a question about this post. Answers use this post and its comments only.',
+    'code-review': 'paste code for a review. add instructions if you want a specific focus.',
+    qna: 'ask factual questions across public posts and opted-in profile activity. single-post tasks, rewrites, and code reviews belong in other modes.',
+    'post-assistant': 'choose a writing action or ask a question about this post. answers use this post and its comments only.',
   };
 
   function updateModeFields() {
@@ -39,7 +39,7 @@
       headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     });
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || 'Chat request failed. Please try again.');
+    if (!response.ok) throw new Error(result.error || 'chat request failed. please try again.');
     return result;
   }
 

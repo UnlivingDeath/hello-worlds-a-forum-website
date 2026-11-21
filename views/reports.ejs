@@ -1,4 +1,45 @@
 <%- include('partials/header', { title: 'Admin report log', query: '' }) %>
-<div class="container"><h1>Admin report log</h1><nav>sort: <a href="?sort=recent">recent</a> · <a href="?sort=user">user</a> · <a href="?sort=post">post</a></nav>
-<% if (sort === 'recent') { reports.forEach(r => { %><details open><summary>@<%= r.reporterName %> reported <%= r.postTitle %> · <%= new Date(r.createdAt).toLocaleString() %></summary><p><%= r.reason %></p><%- include('partials/report-response', { report: r }) %></details><% }) } else { const groups = {}; reports.forEach(r => { const key = sort === 'user' ? r.reporterName : r.postTitle; (groups[key] ||= []).push(r); }); Object.entries(groups).forEach(([key, items]) => { %><details><summary><%= key %> (<%= items.length %>)</summary><% items.forEach(r => { %><article><p><%= r.postTitle %> · @<%= r.reporterName %>: <%= r.reason %></p><%- include('partials/report-response', { report: r }) %></article><% }) %></details><% }) } %>
-</div><%- include('partials/footer') %>
+<div class="container reports-page">
+  <header class="reports-heading">
+    <div>
+      <p class="dashboard-eyebrow">moderation</p>
+      <h1>admin report log</h1>
+    </div>
+    <span class="dashboard-count"><%= reports.length %> open</span>
+  </header>
+  <nav class="reports-sort" aria-label="Report sorting">
+    <a class="<%= sort === 'recent' ? 'active' : '' %>" href="?sort=recent">recent</a>
+    <a class="<%= sort === 'user' ? 'active' : '' %>" href="?sort=user">by user</a>
+    <a class="<%= sort === 'post' ? 'active' : '' %>" href="?sort=post">by post</a>
+  </nav>
+  <div class="reports-panel">
+  <% if (!reports.length) { %>
+    <div class="notifications-empty"><i class="bi bi-shield-check"></i><p>no open reports</p></div>
+  <% } else if (sort === 'recent') { reports.forEach(r => { %>
+    <details class="admin-report-card" open>
+      <summary>
+        <span>@<%= r.reporterName %> reported <strong><%= r.postTitle %></strong></span>
+        <time><%= new Date(r.createdAt).toLocaleString() %></time>
+      </summary>
+      <div class="admin-report-card-body">
+        <p><%= r.reason %></p>
+        <%- include('partials/report-response', { report: r }) %>
+      </div>
+    </details>
+  <% }) } else { const groups = {}; reports.forEach(r => { const key = sort === 'user' ? r.reporterName : r.postTitle; (groups[key] ||= []).push(r); }); Object.entries(groups).forEach(([key, items]) => { %>
+    <details class="admin-report-card">
+      <summary><span><%= key %></span><span class="reports-count"><%= items.length %></span></summary>
+      <div class="admin-report-card-body">
+        <% items.forEach(r => { %>
+          <article class="admin-report-group-item">
+            <p><strong><%= r.postTitle %></strong> · @<%= r.reporterName %></p>
+            <p><%= r.reason %></p>
+            <%- include('partials/report-response', { report: r }) %>
+          </article>
+        <% }) %>
+      </div>
+    </details>
+  <% }) } %>
+  </div>
+</div>
+<%- include('partials/footer') %>

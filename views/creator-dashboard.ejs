@@ -1,3 +1,43 @@
 <%- include('partials/header', { title: 'Creator dashboard', query: '' }) %>
-<div class="container"><h1>Creator dashboard</h1><h2>Admins</h2><% if (!admins.length) { %><p>No admins assigned.</p><% } %><ul><% admins.forEach(a => { %><li>@<%= a.username %> <form action="/creator/admins/<%= a._id %>/revoke" method="POST" style="display:inline"><button class="link-btn">revoke admin</button></form></li><% }) %></ul>
-<form action="/creator/admins" method="POST"><label for="username">Add admin by username</label><input id="username" name="username" required minlength="3" maxlength="24"><button class="btn">add</button></form></div><%- include('partials/footer') %>
+<div class="container dashboard-page">
+  <header class="dashboard-heading">
+    <div>
+      <p class="dashboard-eyebrow">creator controls</p>
+      <h1>creator dashboard</h1>
+    </div>
+    <span class="dashboard-count"><%= admins.length %> admin<%= admins.length === 1 ? '' : 's' %></span>
+  </header>
+
+  <div class="dashboard-grid">
+    <section class="dashboard-panel">
+      <h2>admins</h2>
+      <% if (!admins.length) { %>
+        <p class="dashboard-empty">no admins assigned.</p>
+      <% } else { %>
+        <ul class="admin-user-list">
+          <% admins.forEach(a => { %>
+            <li>
+              <div class="admin-user">
+                <span class="admin-avatar" aria-hidden="true"><%= a.username.charAt(0).toUpperCase() %></span>
+                <div><strong>@<%= a.username %></strong><small>administrator</small></div>
+              </div>
+              <form action="/creator/admins/<%= a._id %>/revoke" method="POST" onsubmit="return confirm('Revoke admin access for @<%= a.username %>?');">
+                <button type="submit" class="link-btn">revoke</button>
+              </form>
+            </li>
+          <% }) %>
+        </ul>
+      <% } %>
+    </section>
+
+    <section class="dashboard-panel dashboard-add-panel">
+      <h2>add administrator</h2>
+      <p>Enter the username of an existing account to grant admin access.</p>
+      <form class="dashboard-admin-form" action="/creator/admins" method="POST">
+        <label for="username">username</label>
+        <input id="username" name="username" required minlength="3" maxlength="24" placeholder="username" autocomplete="off">
+        <button type="submit" class="btn btn-small">add admin</button>
+      </form>
+    </section>
+  </div>
+</div><%- include('partials/footer') %>

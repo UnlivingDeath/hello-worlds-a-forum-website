@@ -19,45 +19,72 @@
   <% } %>
 </div>
 <div class="container post-detail">
+  <span class="post-type-badge post-detail-type"><%= post.postType %></span>
  
   <h2><%= post.title %></h2>
   <div class="post-meta-2">
     <i class="bi bi-person-fill"></i> <a href="/users/<%= post.author %>"><%= post.authorRole === 'creator' ? '[creator] ' : post.authorRole === 'admin' ? '[admin] ' : '' %><%= post.authorName %></a><br><i class="bi bi-calendar-event-fill"></i> <%= new Date(post.createdAt).toLocaleString() %>
   </div>
-  <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
-
-<% } %>
-  <% if (post.tags && post.tags.length) { %>
+  <% if ((post.tags && post.tags.length) || post.isPinned || post.isMain || post.postType === 'question') { %>
     <div class="tag-list">
+      <% if (post.isPinned) { %><a class="tag-pill special-tag" href="/search?tag=pinned"><i class="bi bi-asterisk"></i> pinned</a><% } %>
+      <% if (post.isMain) { %><a class="tag-pill special-tag" href="/search?tag=main"><i class="bi bi-asterisk"></i> main</a><% } %>
+      <% if (post.postType === 'question') { const questionTag = post.questionState === 'solved' ? 'solved-question' : 'unsolved-question'; %><a class="tag-pill special-tag" href="/search?tag=<%= questionTag %>"><i class="bi bi-asterisk"></i> <%= tagLabel(questionTag) %></a><% } %>
       <% post.tags.forEach(function(t) { %>
-        <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= t %></a>
+        <a class="tag-pill" href="/search?tag=<%= encodeURIComponent(t) %>"><i class="bi bi-tags-fill"></i> <%= tagLabel(t) %></a>
       <% }) %>
     </div>
   <% } %>
 
-  <% if (post.poll && post.poll.options && post.poll.options.length >= 2) { %>
-    <% const pollVoted = user && post.poll.options.some(o => o.votes.some(v => v.toString() === user.id)); %>
-    <section class="poll"><h3><%= post.poll.question %></h3>
-      <% if (user && !pollVoted) { %><form action="/posts/<%= post._id %>/poll/vote" method="POST"><% } %>
-      <% post.poll.options.forEach(function(option, index) { const count = option.votes.length; const total = post.poll.options.reduce((sum, item) => sum + item.votes.length, 0); %>
-        <div><% if (user && !pollVoted) { %><label><input type="radio" name="option" value="<%= index %>" required> <%= option.title %></label><% } else { %><span><%= option.title %></span><% } %>
-        <% if (pollVoted) { %><span> — <%= total ? Math.round(count * 100 / total) : 0 %>% (<%= count %>)</span><% } %></div>
+  <% if (post.postType === 'poll' && post.poll && post.poll.options && post.poll.options.length >= 2) { %>
+    <% const myPollChoice = user ? post.poll.options.findIndex(o => o.votes.some(v => v.toString() === user.id)) : -1; const pollVoted = myPollChoice >= 0; const canSeePollResults = pollVoted || (user && post.author.toString() === user.id); const pollTotal = post.poll.options.reduce((sum, option) => sum + option.votes.length, 0); %>
+    <section class="poll poll-results"><% if (post.poll.question) { %><h3><%= post.poll.question %></h3><% } %>
+      <% if (user && !pollVoted) { %><form class="poll-vote-form" action="/posts/<%= post._id %>/poll/vote" method="POST"><% } %>
+      <% post.poll.options.forEach(function(option, index) { const count = option.votes.length; const percent = pollTotal ? Math.round(count * 100 / pollTotal) : 0; %>
+        <div class="poll-option-row">
+          <% if (user && !pollVoted) { %><label class="poll-option-label"><input type="radio" name="option" value="<%= index %>" required><span><%= option.title %></span></label><% } else { %><span class="poll-option-label"><%= option.title %></span><% } %>
+          <% if (canSeePollResults) { %><div class="poll-result-track" role="img" aria-label="<%= option.title %>: <%= percent %>%"><span class="poll-result-fill <%= index === myPollChoice ? 'selected' : '' %>" style="width:<%= percent %>%"></span></div><strong><%= percent %>% · <%= count %></strong><% } %>
+        </div>
       <% }) %>
-      <% if (user && !pollVoted) { %><button class="btn btn-small" type="submit">vote</button></form><% } else if (!user) { %><p><a href="/login">log in</a> to vote.</p><% } else { %><form action="/posts/<%= post._id %>/poll/vote" method="POST"><label for="change-vote">change vote</label><select id="change-vote" name="option"><% post.poll.options.forEach(function(option, index) { %><option value="<%= index %>"><%= option.title %></option><% }) %></select><button class="btn btn-small">update</button></form><% } %>
+      <% if (user && !pollVoted) { %><button class="btn btn-small poll-vote-submit" type="submit">vote</button></form><% } else if (!user) { %><p><a href="/login">log in</a> to vote and see results.</p><% } else { %><div class="poll-vote-actions"><form class="poll-vote-form poll-change-vote-form" action="/posts/<%= post._id %>/poll/vote" method="POST"><label for="change-vote">change vote</label><select id="change-vote" name="option"><% post.poll.options.forEach(function(option, index) { %><option value="<%= index %>" <%= index === myPollChoice ? 'selected' : '' %>><%= option.title %></option><% }) %></select>
+        <div class="post-owner-actions">
+        <button class="btn btn-small poll-vote-submit" type="submit">update</button>
+        <form class="poll-vote-form poll-remove-vote-form" action="/posts/<%= post._id %>/poll/vote" method="POST">
+          <button class="btn btn-small poll-vote-submit" type="submit" name="action" value="remove">remove vote</button>
+        </form>
+      </form>
+      </div>
+    </div><% } %>
     </section>
   <% } %>
-  <% if (user && post.author.toString() !== user.id) { %><details><summary>report post</summary><form action="/posts/<%= post._id %>/report" method="POST"><textarea name="reason" maxlength="2000" required placeholder="Why are you reporting this post?"></textarea><button class="btn btn-small">send report</button></form></details><% } %>
+
 
   <!-- <p class="post-body"><%= post.body %></p> -->
    <div class="post-body md-content"><%- md(post.body) %></div>
-     <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
-
+     <% if (post.postType === 'question' && post.questionState === 'solved') { %><div class="solved-window"><i class="bi bi-check-circle-fill"></i> this question has been solved</div><% } %>
     <div class="post-owner-actions">
+  <% if (user && (post.author.toString() === user.id || ['admin','creator'].includes(user.role))) { %>
+
     <a href="/posts/<%= post._id %>/edit" class="btn btn-small edit-and-del-buttons"><i class="bi bi-pen"></i> edit</a>
     <form action="/posts/<%= post._id %>/delete" method="POST" onsubmit="return confirm('Delete this post? This cannot be undone.');" style="display:inline" class="delete-align">
       <button type="submit" class="btn  btn-small edit-and-del-buttons"><i class="bi bi-trash"></i> delete</button>
     </form>
+  <% } %>
+    <% if (user) { %>
+      <a class="btn btn-small ai-assist-style" href="/chat?mode=post-assistant&amp;postUrl=<%= encodeURIComponent('/posts/' + post._id) %>"><i class="bi bi-stars"></i> ai post assist</a>
+    <% } else { %>
+      <a class="btn btn-small ai-assist-style" href="/login"><i class="bi bi-stars"></i> ai post assist</a>
+    <% } %>
   </div>
+
+  <% if (user && post.author.toString() !== user.id) { %>
+    <details class="report-panel">
+      <summary>report post</summary>
+      <form class="report-form" action="/posts/<%= post._id %>/report" method="POST">
+        <textarea name="reason" maxlength="2000" required placeholder="why are you reporting this post?"></textarea>
+        <button type="submit" class="btn btn-small">send report</button>
+      </form>
+    </details>
   <% } %>
 
   <div class="comments-section">
@@ -98,6 +125,77 @@
     <% } %>
   </div>
 </div>
+<aside class="post-side-panel" aria-label="Post page panels">
+  <details class="post-panel post-notifications" open>
+    <summary class="window-title-bar">notifications<% if (unreadCount > 0) { %> <span class="notif-badge"><%= unreadCount %></span><% } %></summary>
+    <div class="window-contents">
+      <% if (!user) { %>
+        <p class="notif-empty">log in to see your notifications.</p>
+      <% } else if (notifications.length === 0) { %>
+        <p class="notif-empty">you got mail! (well, not yet - nothing here.)</p>
+        <a href="/notifications">show all notifications</a>
+      <% } else { %>
+        <% if (unreadCount > 0) { %>
+          <form action="/notifications/read-all" method="POST" style="margin-bottom:0.5rem;">
+            <button type="submit" class="notif-mark-all-btn">mark all as read</button>
+          </form>
+        <% } %>
+        <form action="/notifications/clear-all" method="POST" onsubmit="return confirm('Clear all notifications?');">
+          <button type="submit" class="notif-mark-all-btn">clear all</button>
+        </form>
+        <ul class="notif-list">
+          <% notifications.forEach(function(n) { %>
+            <li class="notif-item<%= n.read ? '' : ' notif-unread' %>">
+              <% if (n.type === 'report_response') { %>
+                <div class="notif-link-btn notif-response-text">
+                  <span class="notif-icon"><i class="bi bi-shield-check"></i></span>
+                  <span class="notif-text"><%= n.message %></span>
+                </div>
+              <% } else { %>
+                <form action="/notifications/<%= n._id %>/read" method="POST" style="margin:0;">
+                  <button type="submit" class="notif-link-btn" title="<%= n.message %>">
+                    <span class="notif-icon">
+                      <% if (n.type === 'comment' || n.type === 'profile_comment') { %><i class="bi bi-chat-left-quote-fill"></i>
+                      <% } else { %><i class="bi bi-arrow-up-circle-fill"></i><% } %>
+                    </span>
+                    <span class="notif-text"><%= n.message %></span>
+                    <% if (!n.read) { %><% } %>
+                  </button>
+                </form>
+              <% } %>
+            </li>
+          <% }) %>
+        </ul>
+        <a href="/notifications">show all notifications</a>
+      <% } %>
+    </div>
+  </details>
+
+  <% if (user && ['admin','creator'].includes(user.role)) { %>
+    <details class="post-panel post-admin-log" open>
+      <summary class="window-title-bar">admin report log</summary>
+      <div class="window-contents">
+        <nav class="post-report-nav">
+          <a href="/admin/reports?sort=recent">recent</a>
+          <a href="/admin/reports?sort=user">by user</a>
+          <a href="/admin/reports?sort=post">by post</a>
+          <a href="/admin/reports">show all</a>
+        </nav>
+        <% if (!reports || !reports.length) { %>
+          <p class="notif-empty">no open reports</p>
+          <a href="/admin/reports">show all reports</a>
+        <% } %>
+        <% (reports || []).forEach(function(report) { %>
+          <details class="report-item" open>
+            <summary>@<%= report.reporterName %> · <%= report.postTitle %></summary>
+            <p><%= report.reason %></p>
+            <%- include('partials/report-response', { report: report }) %>
+          </details>
+        <% }) %>
+      </div>
+    </details>
+  <% } %>
+</aside>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/easymde@2.18.0/dist/easymde.min.js"></script>
 <script src="/js/editor.js"></script>

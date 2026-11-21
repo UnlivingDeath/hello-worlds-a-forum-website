@@ -17,7 +17,9 @@ const chatRoutes = require('./routes/chat');
 const userRoutes = require('./routes/user');
 const moderationRoutes = require('./routes/moderation');
 const { renderMarkdown, excerpt } = require('./utils/markdown');
+const { tagLabel } = require('./utils/tag-taxonomy');
 const connectDB = require('./config/db');
+const { runSchemaCompatibility } = require('./services/schema-compatibility');
 
 function createApp() {
   const app = express();
@@ -87,6 +89,7 @@ function createApp() {
 
   app.locals.md = renderMarkdown;
   app.locals.excerpt = excerpt;
+  app.locals.tagLabel = tagLabel;
 
   return app;
 }
@@ -96,6 +99,7 @@ let forumApp;
 
 app.use((req, res, next) => {
   connectDB()
+    .then(runSchemaCompatibility)
     .then(() => {
       if (!forumApp) {
         forumApp = createApp();
@@ -113,6 +117,7 @@ if (require.main === module) {
   const PORT = process.env.PORT || 3000;
 
   connectDB()
+    .then(runSchemaCompatibility)
     .then(() => {
       forumApp = createApp();
       forumApp.listen(PORT, () => {
