@@ -26,7 +26,8 @@ const swaggerSpec = swaggerJSDoc({
 });
 
 function setupSwagger(app) {
-  app.get('/api-docs', (req, res) => {
+  app.get('/api-docs', (req, res, next) => {
+    if (req.path !== '/api-docs') return next();
     const queryIndex = req.originalUrl.indexOf('?');
     const query = queryIndex === -1 ? '' : req.originalUrl.slice(queryIndex);
     res.redirect(308, `/api-docs/${query}`);
