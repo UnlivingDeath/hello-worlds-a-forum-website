@@ -20,6 +20,7 @@ const { renderMarkdown, excerpt } = require('./utils/markdown');
 const { tagLabel } = require('./utils/tag-taxonomy');
 const connectDB = require('./config/db');
 const { runSchemaCompatibility } = require('./services/schema-compatibility');
+const setupSwagger = require('./config/swagger');
 
 function createApp() {
   const app = express();
@@ -76,6 +77,8 @@ function createApp() {
   app.use('/', moderationRoutes);
   app.use('/', chatRoutes);
   app.use('/api', codeExecutionRoutes);
+
+  setupSwagger(app);
 
   app.use((err, req, res, next) => {
     console.error('Request failed:', err);

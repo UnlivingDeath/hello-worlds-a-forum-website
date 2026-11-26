@@ -117,6 +117,64 @@ router.get('/chat/:id', requireChatUser, async (req, res) => {
   });
 });
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Chat
+ *     description: Forum assistant conversations.
+ * components:
+ *   schemas:
+ *     NewConversation:
+ *       type: object
+ *       required: [mode]
+ *       properties:
+ *         mode:
+ *           type: string
+ *           enum: [forum-assistant, code-review, post-assistant]
+ *         postUrl:
+ *           type: string
+ *           description: Required for post-assistant mode; must refer to a forum post on this site.
+ *     Conversation:
+ *       type: object
+ *       properties:
+ *         id: { type: string }
+ *         mode: { type: string }
+ *     ChatMessage:
+ *       type: object
+ *       properties:
+ *         message: { type: string }
+ *         code: { type: string }
+ *         instructions: { type: string }
+ */
+
+/**
+ * @swagger
+ * /api/chat/conversations:
+ *   post:
+ *     summary: Create a chat conversation
+ *     tags: [Chat]
+ *     security:
+ *       - sessionCookie: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/NewConversation'
+ *     responses:
+ *       201:
+ *         description: Conversation created.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Conversation'
+ *       400:
+ *         description: Invalid mode or post URL.
+ *       401:
+ *         description: Sign in required.
+ *       404:
+ *         description: Referenced post not found.
+ */
 router.post('/api/chat/conversations', requireChatUser, async (req, res) => {
   const { mode, postUrl } = req.body || {};
   if (!MODES.has(mode)) return res.status(400).json({ error: 'choose a valid chat mode.' });
@@ -150,6 +208,27 @@ router.post('/api/chat/conversations', requireChatUser, async (req, res) => {
   res.status(201).json({ id: conversation._id.toString(), mode: conversation.mode });
 });
 
+/**
+ * @swagger
+ * /api/chat/conversations/{id}:
+ *   delete:
+ *     summary: Delete a chat conversation
+ *     tags: [Chat]
+ *     security:
+ *       - sessionCookie: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+ *     responses:
+ *       200:
+ *         description: Conversation deleted.
+ *       401:
+ *         description: Sign in required.
+ *       404:
+ *         description: Conversation not found.
+ */
 router.delete('/api/chat/conversations/:id', requireChatUser, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Conversation not found.' });
   const deleted = await ChatConversation.findOneAndDelete(conversationFilter(req));
@@ -157,6 +236,39 @@ router.delete('/api/chat/conversations/:id', requireChatUser, async (req, res) =
   res.json({ ok: true });
 });
 
+/**
+ * @swagger
+ * /api/chat/conversations/{id}/messages:
+ *   post:
+ *     summary: Send a message to a chat conversation
+ *     tags: [Chat]
+ *     security:
+ *       - sessionCookie: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ChatMessage'
+ *     responses:
+ *       200:
+ *         description: Assistant response and supporting sources.
+ *       400:
+ *         description: Empty input or conversation message limit reached.
+ *       401:
+ *         description: Sign in required.
+ *       404:
+ *         description: Conversation or source post not found.
+ *       413:
+ *         description: Source post context is too large.
+ *       502:
+ *         description: AI service unavailable.
+ */
 router.post('/api/chat/conversations/:id/messages', requireChatUser, async (req, res) => {
   if (!mongoose.isValidObjectId(req.params.id)) return res.status(404).json({ error: 'Conversation not found.' });
   const conversation = await ChatConversation.findOne(conversationFilter(req)).lean();

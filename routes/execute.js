@@ -19,6 +19,64 @@ const compilers = {
   bash: 'bash'
 };
 
+/**
+ * @swagger
+ * tags:
+ *   - name: Code execution
+ *     description: Run snippets in supported languages.
+ * components:
+ *   schemas:
+ *     ExecutionRequest:
+ *       type: object
+ *       required: [language, code]
+ *       properties:
+ *         language:
+ *           type: string
+ *           enum: [javascript, python, typescript, java, cpp, c, csharp, bash]
+ *         code:
+ *           type: string
+ *           maxLength: 10000
+ *         stdin:
+ *           type: string
+ *           maxLength: 2000
+ *     ExecutionResult:
+ *       type: object
+ *       properties:
+ *         stdout: { type: string }
+ *         stderr: { type: string }
+ *         compilerOutput: { type: string }
+ *         exitCode: { type: integer, nullable: true }
+ *         signal: { type: string }
+ *         outputTruncated: { type: boolean }
+ */
+
+/**
+ * @swagger
+ * /api/execute:
+ *   post:
+ *     summary: Run code
+ *     tags: [Code execution]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/ExecutionRequest'
+ *     responses:
+ *       200:
+ *         description: Code output and exit status.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ExecutionResult'
+ *       400:
+ *         description: Invalid language, code, or input.
+ *       429:
+ *         description: Per-IP execution limit reached.
+ *       502:
+ *         description: Code execution service unavailable.
+ */
+
 const cleanupTimer = setInterval(() => {
   const cutoff = Date.now() - WINDOW_MS;
   for (const [ip, request] of requestsByIp) {

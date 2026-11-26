@@ -22,6 +22,8 @@
     "markdown-it": "^15.0.2",
     "marked": "^18.0.14",
     "mongoose": "^8.6.0",
-    "sanitize-html": "2.16.0"
+    "sanitize-html": "2.16.0",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1"
   }
 }
